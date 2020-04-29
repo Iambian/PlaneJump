@@ -16,10 +16,7 @@ XREF _track
 
 temp1 EQU -3
 temp2 EQU -6
-curbuf       EQU -9
-curwidth	 EQU -12
-curtilefield EQU -15
-
+temp3 EQU -9
 
 tr_offset EQU 3
 px_offset EQU 6
@@ -45,7 +42,7 @@ _drawGameField:
 			;init values for main loop
 		pop af
 		neg
-		;add a,240
+		add a,240
 		ld c,a
 		;ld c,240
 		ld b,(iy+px_offset)  ;used to determine how many rows of top tile to draw
@@ -64,56 +61,7 @@ dgf_mainloop:
 		mlt hl
 		add hl,hl  ;finish multiply by 320
 		ld a,(de)
-		ld (iy+curtilefield),a
 		push bc
-			push de
-				ld de,(ix+1)  ;startx
-				add hl,de     ;get starting position on scanline
-				ld bc,(0E30014h)
-				add hl,bc
-				ld bc,(ix+4)        ;width in B
-				ld (iy+curwidth),bc ;store for later
-				xor a
-dgf_drawloop:	inc a
-				push af
-					ld e,(iy+curwidth)
-					ld d,a
-					mlt de              ;get offset error in D
-					ld e,d
-					ld d,0
-					ld c,(iy+curwidth+1)
-					ld b,a              ;
-					ld a,c              ;save width for later
-					add a,e             ;width plus curerr for current block
-					mlt bc              ;get total offset in bc
-					ex de,hl
-					add hl,bc           ;find total true offset
-					add hl,de           ;now have actual address. (keep DE)
-					srl (iy+curtilefield)
-					jr nc,dgf_skipfield
-					ld b,a
-					xor a
-dgf_drawsubloop:	ld (hl),a
-					inc hl
-					djnz dgf_drawsubloop
-dgf_skipfield:	pop af
-				cp 4
-				jr c,dgf_drawloop
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-			
-			
-			
-			
 			ld bc,(ix+3)  ;startx
 			add hl,bc     ;offset complete.
 			ld bc,(0E30014h)

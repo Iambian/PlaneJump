@@ -53,9 +53,12 @@
 #include "gfx/out/sprites_gfx.h"
 
 typedef struct thing {
-	uint8_t ypos;    //0-240. is 255 if scanline is out of range
-	int     startx;  //reasonably could be a uint8_t, but doing for easy load
-	int     width;   //8.8 fixed point
+	int ypos;
+	int startx;
+	uint8_t w1;
+	uint8_t w2;
+	uint8_t w3;
+	uint8_t w4;
 } scanline_t;
 
 typedef struct thing2 { // :)
@@ -160,7 +163,9 @@ void main(void)
 				genSection(stage_state);
 				genSection(stage_state);
 				state = GS_GAMEPLAY;
-				tile_passed = tile_px_passed = 0;
+				//tile_passed = tile_px_passed = 0;
+				tile_px_passed = 32;
+				tile_passed = 16;
 				break;
 			
 			case GS_GAMEPLAY:
@@ -287,22 +292,6 @@ void genSection(int8_t gentype) {
 
 #define CAM_DIST 3.0f
 #define PLANE_DIST 2.0f
-//stripped down, as we aren't going to rotate the camera at all.
-//also performs translation to physical screen.
-vector_t proj(vector_t point) {
-	float z;
-	vector_t result;
-	
-	z = -(point.z-CAM_DIST);
-	
-	//Translation to 2D, then to screen buffer coord system
-	//Adjustment factors tweaked via trial-and-error
-	result.x = (((PLANE_DIST / z) * point.x) + 5.0f) * 32;
-	result.y = (((PLANE_DIST / z) * point.y) + 2.5f) * 38;
-	
-	return result;
-}
-
 #define IN_ANGLE ((0.0f+20.0f) * (3.14159265359f / 180.0f))
 
 //old size: 3287. Should not be greater than ~6200 bytes at end
@@ -311,32 +300,33 @@ vector_t proj(vector_t point) {
 void init_xlate(int angle) {
 	///*
 	float x,y,a,w;
+	int yi,wi,werr;
 	uint8_t xi;
-	int yi;
-	int temp;
-	vector_t basepoint,point1,point2;
-	vector_t point,point0,pointw,pointh,rpoint;
+	float x1,y1,z1;
+	float x2;
+	
 	a = IN_ANGLE; //(float)angle;
 	
-	
-	basepoint = empty_point; //okay. that made the compiler shut up.
 	for (y = -(3.5f+1.0f), yi = -32; yi < (240+32) ; y += (1.0f/32.0f), ++yi) {
-		//do outside-buffer-clipping later.
-		basepoint.x = (-2.0f);
-		basepoint.y = (y+0.0f)*cos(a);
-		basepoint.z = (y+0.0f)*sin(a);
-		point1 = proj(basepoint);
-		basepoint.x = (-1.0f);
-		point2 = proj(basepoint);
-		if ( ((unsigned int)yi)<240 && ((unsigned int)point1.y)<240)
-			translate[yi+32].ypos   = (uint8_t) point1.y;
+		//condensed projection
+		z1 = PLANE_DIST/-(y*sin(a)-CAM_DIST);
+		x1 = ((z1*-2.0f   )+5.0f)*32;
+		y1 = ((z1*y*cos(a))+2.5f)*38;
+		x2 = ((z1*-1.0f   )+5.0f)*32;
+		
+		if ( ((unsigned int)yi)<240 && ((unsigned int)y1)<240)
+			translate[yi+32].ypos   = (uint8_t) y1;
 		else
 			translate[yi+32].ypos   = 255;
-		translate[yi+32].startx = (int) point1.x;
-		//changing width to 8.8 fixed point
-		translate[yi+32].w1)[xi] = (point2.x-point1.x)*256;
-		dbg_sprintf(dbgout,"yidx %i, ypos %i, xstart %i, w1 %i, w2 %i, w3 %i, w4 %i\n",yi,translate[yi+32].ypos,translate[yi+32].startx,translate[yi+32].width);
-	}
+		translate[yi+32].startx = (int) x1;
+		for (xi=0,wi=(x2-x1)*256,werr=0;xi<4;++xi,werr+=wi&255) {
+			((uint8_t*)&translate[yi+32].w1)[xi] = wi>>8;
+			if (werr&256) {
+				werr -= 256;
+				((uint8_t*)&translate[yi+32].w1)[xi]++;
+			}
+		}
+		dbg_sprintf(dbgout,"yidx %i, ypos %i, xstart %i, w1 %i, w2 %i, w3 %i, w4 %i\n",yi,translate[yi+32].ypos,translate[yi+32].startx,translate[yi+32].w1,translate[yi+32].w2,translate[yi+32].w3,translate[yi+32].w4);	}
 	//*/
 	/*
 	int y;
