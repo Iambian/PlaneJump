@@ -1,0 +1,104 @@
+Segment  Base   Top    High   Length
+-------- ------ ------ ------ -------
+icon     D1A882 D1A994           112h
+launcher D1A994 D1A9EC            58h
+libs     D1A9EC D1AA35            49h
+startup  D1AA35 D1AA74            3Fh
+cleanup  D1AA74 D1AA88            14h
+exit     D1AA88 D1AA8E             6h
+code     D1AA8E D1B462           9D4h
+data     D1B462 D1B7D2           370h
+strsect  D1B7D2 D1B81A            48h
+text     D1B81A D1B81A             0h
+bss      D031F6 D05E1E D13FD6   2C28h
+header   D1A87F D1A882             3h
+
+Label                           Value
+-----------------------------   ------
+_sin                          = 022118
+_cos                          = 02211C
+_os_DisableHomeTextBuffer     = D1AA8E
+_os_EnableHomeTextBuffer      = D1AAA0
+_random                       = D1AAB2
+__state                       = D1B462
+_zx7_Decompress               = D1AB09
+__fmul                        = 000288
+_sprintf                      = 0000BC
+__fsub                        = 000290
+__imul_b                      = 000158
+__imul_b                      = 000150
+__ishrs_b                     = 00017C
+__ishrs_b                     = 000180
+__fneg                        = D1AB75
+__ishru_b                     = 000184
+__ishru_b                     = 000188
+_memset                       = D1AB82
+_memcpy                       = 0000A4
+__ior                         = 000168
+__idivs                       = 00013C
+__icmpzero                    = 000138
+__seqcaseD                    = 000214
+__fadd                        = 000270
+__fdiv                        = 000278
+__setflag                     = 000218
+__ftol                        = 00027C
+__findlibload                 = D1A994
+__program_icon                = D1A887
+__program_description         = D1A989
+__ccleanup                    = D1AA74
+_errno                        = D008DC
+_init                         = D1A882
+_exit                         = D1AA8A
+__exit                        = D1AA63
+__exitsp                      = D1AA63
+__errsp                       = D1AA63
+_ball0_compressed             = D1B494
+_ball1_compressed             = D1B4F2
+_ball2_compressed             = D1B55D
+_ball3_compressed             = D1B5C8
+_ball4_compressed             = D1B61F
+_ball5_compressed             = D1B687
+_ball6_compressed             = D1B6F3
+_ball7_compressed             = D1B759
+_init_xlate                   = D1B0E7
+_proj                         = D1B043
+_genSection                   = D1AFB2
+_drawMenu                     = D1AF18
+_printTextCenter              = D1AEDB
+_drawTitleFrame               = D1AE85
+_keyconfirm                   = D1AE68
+_keywait                      = D1AE53
+_main                         = D1AB99
+_ballanim                     = D05E06
+_ball7                        = D1B7CE
+_ball7_data                   = D05A04
+_ball6                        = D1B7CB
+_ball6_data                   = D05602
+_ball5                        = D1B7C8
+_ball5_data                   = D05200
+_ball4                        = D1B7C5
+_ball4_data                   = D04DFE
+_ball3                        = D1B7C2
+_ball3_data                   = D049FC
+_ball2                        = D1B7BF
+_ball2_data                   = D045FA
+_ball1                        = D1B7BC
+_ball1_data                   = D041F8
+_ball0                        = D1B7B9
+_ball0_data                   = D03DF6
+_translate                    = D03216
+_track                        = D031F6
+_empty_point                  = D1B7AD
+_drawGameField                = D1B319
+_drawTrapezoid                = D1B3B0
+_gfx_Begin                    = D1A9FF
+_gfx_End                      = D1AA03
+_gfx_FillScreen               = D1AA07
+_gfx_SwapDraw                 = D1AA0B
+_gfx_PrintStringXY            = D1AA0F
+_gfx_SetTextFGColor           = D1AA13
+_gfx_GetStringWidth           = D1AA17
+_gfx_TransparentSprite_NoClip = D1AA1B
+_gfx_SetTextScale             = D1AA1F
+_gfx_SetTransparentColor      = D1AA23
+_kb_AnyKey                    = D1AA31

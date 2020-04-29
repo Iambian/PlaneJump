@@ -1,0 +1,53 @@
+A plan goes here. something. or another.
+
+
+ok. let's start with something simple and go from there.
+a flat to-the-top tilemap or another. probably just solid rectangles
+with a ball at the bottom. when it is not at the bottom, it's
+"jumping" upward. probably want to add some sort of physics or something.
+
+lookahead should probably be about 12 squares. 
+"horizon" at the top of the screen.
+
+going to use squares for now. create by pasting together two triangles. 
+this will make it easier to rescale the "squares" into rhombus...es?
+nowait. that word. typical diagram looks like a pyramid with the top shaved off.
+trapezoid. that thing.
+
+going to cheat with the 3-D look by doing that. And by doing it that way,
+it's probably not cheating very much. boo.
+
+for optimization later, probably recode the trapezoid generator into
+pure assembly. since the parallel (sp?) lines are horizontal, all we need for
+the other sides is the slopes, so basically two inline/concurrent line routines
+and a way to fill the space between the two points for each scanline.
+
+yes.
+
+something about scoring. collision detection. or making sure ball is still on a square.
+
+let's make squares 32px high, moving at 4px per frame. uh. how will that work?
+
+if the play field is 4 squares wide, that's 128? might look tiny until we 3d-ize the thing.
+sprite coords will probably need to be mapped post-projection yeah. that sounds doable.
+for now, let's not bother with that and just do flatness. because that's easy.
+
+what should matter is that the center of the ball is the only thing needed to be
+touching the path to be valid. so position of ball such that it will not clip outside
+the screen. or rather, outside the outer edge of the paths (it will be up to
+the projection part to widen the bottom to *be* at the edges of the screen), but
+the midpoint of the sprite is what should matter for determining if it's on a path.
+
+for now, we'll generate the maps randomly. ish. every random thing must be stretched by
+two squares just to make things fair. FOUR SQUARE DUPLICATION FOR TESTING PURPOSES.
+the actual table responsible will be bitpacked. maybe so we can later add more rows?
+i suspect that it's 4 in the original game to keep level sizes (yeah, the game seems to
+have "levels") low by packing each row in a nibble.
+
+Scoring can come later. An afterthought, really.
+
+Later on, perhaps instead of true random, perhaps randomized level chunking that's
+pasted into a lookahead buffer further ahead than the level shows.
+
+Yeah, that sounds about right. The level track may be 32 bytes long, then.
+

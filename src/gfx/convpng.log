@@ -1,0 +1,23 @@
+opened convpng.ini
+
+--- sprites_gfx (C) ---
+using built-in xlibc palette ...
+transparent color index : 255
+transparent color : 0x0000
+8:
+ ball0 : converted! (1026 > 94 bytes)
+ ball1 : converted! (1026 > 107 bytes)
+ ball2 : converted! (1026 > 107 bytes)
+ ball3 : converted! (1026 > 87 bytes)
+ ball4 : converted! (1026 > 104 bytes)
+ ball5 : converted! (1026 > 108 bytes)
+ ball6 : converted! (1026 > 102 bytes)
+ ball7 : converted! (1026 > 84 bytes)
+
+converted in 0 s
+
+[warning] image quality might be too low.
+please try grouping similar images, reducing image colors, 
+or selecting a better palette if conversion is not ideal.
+
+finished!
