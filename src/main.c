@@ -55,10 +55,7 @@
 typedef struct thing {
 	int ypos;
 	int startx;
-	uint8_t w1;
-	uint8_t w2;
-	uint8_t w3;
-	uint8_t w4;
+	uint8_t w[4];
 } scanline_t;
 
 typedef struct thing2 { // :)
@@ -85,6 +82,7 @@ void init_xlate(int angle);
 //total per function (or scope?), so things too large should also be here.
 uint8_t track[32];
 scanline_t translate[240+32+32];  //32 above and below
+int translate_last_usable;
 gfx_UninitedSprite(ball0,32,32);
 gfx_UninitedSprite(ball1,32,32);
 gfx_UninitedSprite(ball2,32,32);
@@ -100,7 +98,7 @@ gfx_sprite_t *ballanim[8];
 void main(void)
 {
 	kb_key_t kdir,kact;
-	uint8_t state,i;
+	uint8_t state,i,j,k;
 	uint8_t stage_state;
 	int8_t tile_px_passed;  //0-32, is vertical offset of current tile.
 	int8_t tile_passed;     //increments. once 16, reset and gen new section
@@ -112,6 +110,8 @@ void main(void)
 	int ball_min_x;
 	int ball_max_x;
 	uint8_t ball_y;
+	uint8_t ball_y_min;
+	uint8_t jumping;
 	
 	
 	
@@ -142,17 +142,27 @@ void main(void)
 	tile_px_passed = tile_passed = 0;
 	
 	ball_counter = 0;
-	ball_max_x = ball_min_x = translate[239+32].startx;
-	for (i=0;i<4;++i) ball_max_x += ((uint8_t*)(&translate[239+32].w1))[i];
+	ball_max_x = ball_min_x = translate[translate_last_usable+32].startx;
+	for (i=0;i<4;++i) ball_max_x += translate[translate_last_usable+32].w[i];
+	ball_max_x -= (32);
 	ball_x = ball_min_x;
-	ball_y = (240-32);
+	ball_y_min = ball_y = (240-32-8);
+	jumping = 0;
 		
 	while (1) {
+		kb_Scan();
 		kdir = kb_Data[7];
 		kact = kb_Data[1];
 		
+		/*	TODO:
+			Change input handling methods to allow free-running, letting
+			each case handle their own debounce (e.g. continue-on-fail)
+		*/
+		
 		//Quick exit without needing to resort to GOTOs.
 		if (state==GS_TITLE && kact&kb_Mode) break;
+		//LEAVE IN UNTIL WE HAVE AN ACTUAL TITLE SCREEN
+		if (kact&kb_Mode) break;
 		gfx_FillScreen(COLOR_WHITE);
 		
 		switch (state) {
@@ -160,16 +170,43 @@ void main(void)
 				//Debugging: Immediately init and go to game mode.
 				memset(track,0,sizeof track);
 				genSection(-1);
-				genSection(stage_state);
+				genSection(1);  //block fill
 				genSection(stage_state);
 				state = GS_GAMEPLAY;
 				//tile_passed = tile_px_passed = 0;
 				tile_px_passed = 32;
 				tile_passed = 16;
+				jumping = 0;
 				break;
 			
 			case GS_GAMEPLAY:
 				if (kact&kb_Mode) { keywait(); gfx_End(); return; }
+				if (kdir&kb_Left && ball_x>=ball_min_x) {
+					ball_x-=4;
+				}
+				if (kdir&kb_Right && ball_x<ball_max_x) {
+					ball_x+=4;
+				}
+				//TODO: COLLISION DETECTION.
+				if (!jumping) {
+					x = translate[translate_last_usable+32].startx;
+					for (j=0,k=1;j<4;++j,k<<=1) {
+						x += (unsigned int)translate[translate_last_usable+32].w[j];
+						if ((ball_x+10) < x) break;
+					}
+					j = tile_passed+4;
+					//if (tile_px_passed+16 > 32) j++;
+					if (k&track[j]) {
+						gfx_PrintStringXY("ON",290,230);
+					} else {
+						gfx_PrintStringXY("OFF",290,230);
+						state = GS_GAMEOVER;
+					}
+					//Located here to prevent infinite air-jumping
+					if (kact&kb_2nd && !jumping) jumping = 4;
+				} else {
+					jumping += 4;
+				}
 				//Let's just show a scrolling field for now.
 				//for (i=0;i<32;++i) {
 					//slow down rendering significantly
@@ -187,17 +224,20 @@ void main(void)
 						genSection(stage_state);
 					}
 				}
-				
 				//we need more frames.
 				ball_counter += 1;
-				gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y);
-				
-				
-				
-				
+				i = (jumping&128)?(jumping&127)^127:jumping&127;
+				gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
 				break;
 			
 			case GS_GAMEOVER:
+				gfx_SetColor(0xBF); //idk what color this is.
+				gfx_FillRectangle(0,240/2-10,320,20);
+				gfx_PrintStringXY("OOF",160-12,120-4);
+				gfx_SwapDraw();
+				keyconfirm();
+				state = GS_TITLE;
+				continue;
 				break;
 			
 			case GS_CREDITS :
@@ -267,6 +307,7 @@ void genSection(int8_t gentype) {
 	uint8_t i,d;
 	uint24_t dt;
 	static uint8_t state=0;
+	static uint8_t counter=0;
 	
 	memcpy(&track[16],&track[0],16);
 	//reinits state to beginning for level progression purposes
@@ -276,15 +317,23 @@ void genSection(int8_t gentype) {
 	}
 	//randgen, 2-wide blocks
 	if (!gentype) {
-		for (i=0;i<16;i+=2) {
+		for (i=0;i<16;i+=1) {
 			dt = random();
 			d = (dt&255)^((dt>>8)&255)^((dt>>16)&255);
+			//DEBUG
+			d = counter++;
+			//END DEBUG
+			
 			track[i] = d;
-			track[i+1] = d;
+			//track[i+1] = d;
 		}
 	}
-	
-	
+	//fill in starting arena
+	if (gentype==1) {
+		for (i=0;i<16;++i) {
+			track[i] = 0xFF;
+		}
+	}
 	return;
 }
 
@@ -292,8 +341,11 @@ void genSection(int8_t gentype) {
 
 #define CAM_DIST 3.0f
 #define PLANE_DIST 2.0f
-#define IN_ANGLE ((0.0f+20.0f) * (3.14159265359f / 180.0f))
-
+#define IN_ANGLE  ((0.0f+30.0f) * (3.14159265359f / 180.0f))
+#define IN_ANGLE2 ((0.0f+30.0f+90.0f) * (3.14159265359f / 180.0f))
+#define SIN_FN(x) ((float)(x-(x*x*x)/(3.0f*2)+(x*x*x*x*x)/(5*4*3*2)-(x*x*x*x*x*x*x)/(7*6*5*4*3*2)))
+#define SIN_PR SIN_FN(IN_ANGLE)
+#define COS_PR SIN_FN(IN_ANGLE2)
 //old size: 3287. Should not be greater than ~6200 bytes at end
 //do nothing for angle at the moment. just do direct translation
 //I don't have a plan.
@@ -305,44 +357,27 @@ void init_xlate(int angle) {
 	float x1,y1,z1;
 	float x2;
 	
-	a = IN_ANGLE; //(float)angle;
-	
 	for (y = -(3.5f+1.0f), yi = -32; yi < (240+32) ; y += (1.0f/32.0f), ++yi) {
 		//condensed projection
-		z1 = PLANE_DIST/-(y*sin(a)-CAM_DIST);
+		z1 = PLANE_DIST/-(y*SIN_PR-CAM_DIST);
 		x1 = ((z1*-2.0f   )+5.0f)*32;
-		y1 = ((z1*y*cos(a))+2.5f)*38;
+		y1 = ((z1*y*COS_PR)+2.5f)*33;
 		x2 = ((z1*-1.0f   )+5.0f)*32;
 		
-		if ( ((unsigned int)yi)<240 && ((unsigned int)y1)<240)
+		if ( ((unsigned int)yi)<240 && ((unsigned int)y1)<240) {
 			translate[yi+32].ypos   = (uint8_t) y1;
-		else
+			translate_last_usable   = yi;
+		} else
 			translate[yi+32].ypos   = 255;
 		translate[yi+32].startx = (int) x1;
 		for (xi=0,wi=(x2-x1)*256,werr=0;xi<4;++xi,werr+=wi&255) {
-			((uint8_t*)&translate[yi+32].w1)[xi] = wi>>8;
+			translate[yi+32].w[xi] = wi>>8;
 			if (werr&256) {
 				werr -= 256;
-				((uint8_t*)&translate[yi+32].w1)[xi]++;
+				translate[yi+32].w[xi]++;
 			}
 		}
-		dbg_sprintf(dbgout,"yidx %i, ypos %i, xstart %i, w1 %i, w2 %i, w3 %i, w4 %i\n",yi,translate[yi+32].ypos,translate[yi+32].startx,translate[yi+32].w1,translate[yi+32].w2,translate[yi+32].w3,translate[yi+32].w4);	}
-	//*/
-	/*
-	int y;
-	//int x;
-	//int tx,ty;
-	//uint8_t i;
-	
-	for (y = -32; y < (240+32); ++y) {
-		translate[y+32].ypos = (y>=0 && y<240) ? y : 255;
-		translate[y+32].startx = 96;
-		translate[y+32].w1 = 32;
-		translate[y+32].w2 = 32;
-		translate[y+32].w3 = 32;
-		translate[y+32].w4 = 32;
 	}
-	*/
 }
 
 

@@ -1,6 +1,5 @@
 .assume adl=1
 XDEF _drawGameField
-XDEF _drawTrapezoid
 
 ;an array of structs 10 bytes wide, containing 32+240+32 entries
 ;+0 ypos, +3 sx, +6 w1, +7 w2, +8 w3, +9 w4 
@@ -14,9 +13,7 @@ XREF _track
 ;Note: 0E30014h is a pointer for the buffer
 
 
-temp1 EQU -3
-temp2 EQU -6
-temp3 EQU -9
+prev_scanline EQU -12  ;whyyyyy???? why can't it be -3 or -6?
 
 tr_offset EQU 3
 px_offset EQU 6
@@ -27,25 +24,24 @@ _drawGameField:
 	add iy,sp
 	push ix
 		;start address on translation
-		ld b,(iy+px_offset)
-		push bc
-			ld c,10
-			mlt bc
-			ld ix,_translate
-			add ix,bc
-			;get starting address on track array
-			ld c,(iy+tr_offset)
-			ld b,0
-			ld hl,_track
-			add hl,bc
-			ex de,hl
-			;init values for main loop
-		pop af
+		ld a,(iy+px_offset)
+		ld b,a
+		ld c,10
+		mlt bc
+		ld ix,_translate
+		add ix,bc
+		;get starting address on track array
+		ld c,(iy+tr_offset)
+		ld b,0
+		ld hl,_track
+		add hl,bc
+		ex de,hl
+		;init values for main loop
+		ld b,a
 		neg
-		add a,240
+		;add a,240
 		ld c,a
-		;ld c,240
-		ld b,(iy+px_offset)  ;used to determine how many rows of top tile to draw
+		ld (iy+prev_scanline),255
 ;draw 240 scanlines.
 ; on entry: B=rows of first tile row to draw, C=240
 ;           IX=&translate[t_offset], DE=&track[p_offset]
@@ -57,6 +53,23 @@ dgf_mainloop:
 		inc l
 		jr z,dgf_skipscanline
 		dec l
+		;The section below solves a line skipping problem
+		ld a,(iy+prev_scanline) ;if prev_scanline+2 == L, dec L and set
+		cp l
+		jr z,dgf_skipscanline   ;if repeating same line, skip. for performance
+		inc a    ;If L==(A+1), is on track
+		jr z,dgf_skip_repro
+		add a,3
+		cp l    ;but if A is still greater than L, interpolate. Else, cancel.
+		jr c,dgf_skip_repro
+		sub a,3
+		ld l,a
+		lea ix,ix-10
+		inc b
+		inc c
+dgf_skip_repro:
+		ld (iy+prev_scanline),l
+		;end section
 		ld h,160   ;half of screen width (320)
 		mlt hl
 		add hl,hl  ;finish multiply by 320
@@ -70,7 +83,7 @@ dgf_mainloop:
 			;first row
 			rra
 			ld c,(ix+6)
-			jr nc,dgf_drawr1
+			jr c,dgf_drawr1
 			add hl,bc
 			jr dgf_finishr1
 dgf_drawr1:
@@ -84,7 +97,7 @@ dgf_finishr1:
 			;second row
 			rra
 			ld c,(ix+7)
-			jr nc,dgf_drawr2
+			jr c,dgf_drawr2
 			add hl,bc   ;b will have been set to 0 regardless of prior path
 			jr dgf_finishr2
 dgf_drawr2:
@@ -98,7 +111,7 @@ dgf_finishr2:
 			;third row
 			rra
 			ld c,(ix+8)
-			jr nc,dgf_drawr3
+			jr c,dgf_drawr3
 			add hl,bc
 			jr dgf_finishr3
 dgf_drawr3:
@@ -112,7 +125,7 @@ dgf_finishr3:
 			;fourth (last) row
 			rra
 			ld c,(ix+9)
-			jr nc,dgf_drawr4
+			jr c,dgf_drawr4
 			add hl,bc
 			jr dgf_finishr4
 dgf_drawr4:
@@ -136,135 +149,3 @@ dgf_endnow:
 	pop ix
 	ret
 	
-;attempt acceleration with this.
-
-tx1 EQU 3
-ty1 EQU 6
-tx2 EQU 9
-ty2 EQU 12
-tw1 EQU 15
-tw2 EQU 18
-color EQU 21
-
-invslope1 EQU -12
-invslope2 EQU -15
-
-tempcx1 EQU -20
-tempcx2 EQU -25	
-
-
-_drawTrapezoid:
-	ld iy,0
-	add iy,sp
-	ld hl,(iy+ty2)
-	ld de,(iy+ty1)
-	or a
-	sbc hl,de
-	ret z           ;zero height object. not allowed.
-	ld c,l
-	ld hl,(iy+tx1)
-	ld de,(iy+tx2)
-	push hl
-		push de
-			call findinvslope
-			ld (iy+invslope1),hl
-		pop hl  ;tx2
-		ld de,(iy+tw2)
-		add hl,de
-		ex de,hl
-	pop hl
-	ld a,c
-	ld bc,(iy+tw1)
-	add hl,bc
-	push hl
-		ld c,a
-		call findinvslope
-		ld (iy+invslope2),hl
-;copy tx1 and tx1+tw1 to tempcx1 and tempcx2 as 24.8
-		xor a
-		ld hl,(iy+tx1)
-		ld (iy+tempcx1+1),hl
-		ld (iy+tempcx1+0),a  ;24.8, fractional part cleared.
-	pop hl  ;tx1+tw1
-	ld (iy+tempcx2+1),hl
-	ld (iy+tempcx2+0),a
-	ld a,c  ;loop counter to A
-	;Find offset into buffer
-	inc a   ;account for initial run
-	jr dtpz_findnewoffset
-dtpz_mainloop:
-	;calc number of pixels to draw
-	ex de,hl
-	ld hl,(iy+tempcx2+1)
-	ld bc,(iy+tempcx1+1)
-	or a
-	sbc hl,bc         ;HL=width-to-draw. Assumes less than 256
-	ld b,L
-	ex de,hl
-	ld c,(iy+color)
-dtpz_subloop_draw:
-	ld (hl),c
-	inc hl
-	djnz dtpz_subloop_draw
-	;find new tempcx1 and 2, then recalc HL
-	ld hl,(iy+tempcx2+0)
-	ld de,(iy+invslope2)
-	add hl,de
-	ld (iy+tempcx2+0),hl
-	ld hl,(iy+tempcx1+0)
-	ld de,(iy+invslope1)
-	add hl,de
-	ld (iy+tempcx1+0),hl
-dtpz_findnewoffset:
-	ld h,(iy+ty1)
-	inc (iy+ty1)
-	ld l,160
-	mlt hl
-	add hl,hl
-	ld de,(iy+tempcx1+1)
-	add hl,de
-	ld de,(0E30014h)  ;Address of screen buffer
-	add hl,de         ;Current address.
-	dec a
-	jr nz,dtpz_mainloop
-	ret
-	
-	
-;in: HL=x1, DE=x2, C=yheight
-;out: HL= 8.8 quotient
-findinvslope:
-	or a
-	sbc hl,de
-	jr c,findinvnegslope
-	ld h,l
-	ld l,0
-	jr div24_8
-findinvnegslope:
-	add hl,de   ;undo initial sbc
-	ex de,hl
-	or a
-	sbc hl,de   ;make positive
-	call div24_8
-	ex de,hl
-	or a
-	sbc hl,hl
-	sbc hl,de   ;make negative
-	ret
-
-;hl/c = hl. destroys a,bc
-;can get away with code for 16/8 because ez80.
-div24_8:
-	xor a
-	ld b,24
-div24_8_start:
-	add	hl,hl	; unroll 24 times
-	rla			; ...
-	cp	c		; ...
-	jr	c,div24_8_skip
-	sub	c		; ...
-	inc	l		; ...
-div24_8_skip:
-	djnz div24_8_start
-	ret
-
-
