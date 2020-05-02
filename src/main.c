@@ -7,7 +7,7 @@
  *--------------------------------------
 */
 
-#define VERSION "0.1"
+#define VERSION "v0.1"
 
 #define GS_TITLE 0
 #define GS_GAMEPLAY 1
@@ -18,16 +18,15 @@
 
 //These color things. Most of them are guesses.
 //My eyes are not clever things.
-#define COLOR_SKYBLUE 0xBF
-#define COLOR_BLACK 0
 #define COLOR_WHITE 255
+#define COLOR_GOLD  254
+#define COLOR_GRAY  253
+#define COLOR_BLACK 0
 #define COLOR_TRANSPARENT COLOR_WHITE
-#define COLOR_RED 0x80
-#define COLOR_GREEN 0x04
-#define COLOR_PURPLE 0x78
-#define COLOR_GOLD 0xE4
 
-
+#define Q_CALCX(x1,x2,xv) ((xv*xv)-xv*(x1+x2)+x1*x2)
+#define Q_SOLVEA(x1,x2,xv,yv) (yv/Q_CALCX(x1,x2,xv))
+#define QUADR(x1,x2,xv,yv,curx) (Q_SOLVEA(x1,x2,xv,yv)*curx*curx-curx*(x1+x2)+x1*x2)
 
 
 /* Keep these headers */
@@ -51,6 +50,7 @@
 
 #include "draw.h"
 #include "gfx/out/sprites_gfx.h"
+#include "gfx/out/title_gfx.h"
 
 typedef struct thing {
 	int ypos;
@@ -72,6 +72,8 @@ void printTextCenter(char *s,int y);
 void drawMenu(char *sa[],uint8_t curopt,uint8_t maxopt);
 void drawTitleFrame(void);
 void genSection(int8_t gentype);  //generates latter 16 blocks of level
+void changePalette(uint16_t *palette);
+void blankScreen();               //prevents artifacting between palette swaps
 vector_t proj(vector_t point);
 
 void init_xlate(int angle);
@@ -91,10 +93,21 @@ gfx_UninitedSprite(ball4,32,32);
 gfx_UninitedSprite(ball5,32,32);
 gfx_UninitedSprite(ball6,32,32);
 gfx_UninitedSprite(ball7,32,32);
+gfx_UninitedSprite(curball,48,48);
 gfx_sprite_t *ballanim[8];
+gfx_UninitedSprite(titlebanner,title_width,title_height);
 
-//add sprites later.
 
+
+uint16_t game_palette[256];
+uint16_t *title_palette = title_gfx_pal;
+
+char *titleopts[] = {"Start game","About","Quit"};
+char *creditstext[] = {
+	"TODO: Add credits to this game."
+	
+	
+};
 void main(void)
 {
 	kb_key_t kdir,kact;
@@ -105,41 +118,44 @@ void main(void)
 	int x,tx;
 	uint8_t y,ty;
 	int score,hiscore;
-	uint8_t ball_counter;    //0-3, index to ballanim
+	uint8_t ball_counter;    //0-7, index to ballanim
 	int ball_x;
 	int ball_min_x;
 	int ball_max_x;
 	uint8_t ball_y;
 	uint8_t ball_y_min;
 	uint8_t jumping;
-	
+	uint8_t going;
+	uint8_t lives;
+	uint8_t curopt,maxopt;
 	
 	
 	gfx_Begin();
 	gfx_SetTransparentColor(COLOR_WHITE);
-	zx7_Decompress(ball0,ball0_compressed); 
-	zx7_Decompress(ball1,ball1_compressed);
-	zx7_Decompress(ball2,ball2_compressed);
-	zx7_Decompress(ball3,ball3_compressed);
-	zx7_Decompress(ball4,ball4_compressed); 
-	zx7_Decompress(ball5,ball5_compressed);
-	zx7_Decompress(ball6,ball6_compressed);
-	zx7_Decompress(ball7,ball7_compressed);
-	init_xlate(0);
-	ballanim[0] = ball7;
-	ballanim[1] = ball6;
-	ballanim[2] = ball5;
-	ballanim[3] = ball4;  //this is so messed up. should've been able to do this in a single statement.
-	ballanim[4] = ball3;
-	ballanim[5] = ball2;
-	ballanim[6] = ball1;
-	ballanim[7] = ball0;  //this is so messed up. should've been able to do this in a single statement.
+	memcpy(game_palette,gfx_palette,512);
+	game_palette[COLOR_GOLD]  = gfx_RGBTo1555(0xFF,0xD7,0x00);
+	game_palette[COLOR_GRAY]  = gfx_RGBTo1555(0x90,0x90,0x80);
+	game_palette[COLOR_BLACK] = gfx_RGBTo1555(0x00,0x00,0x00);
+	for (i=1;i<241;++i) {
+		game_palette[242-i] = gfx_Darken(gfx_RGBTo1555(0x87,0xCE,0xEB),255-i);
+	}
+	zx7_Decompress(titlebanner,title_compressed);
 	
+	zx7_Decompress(ball0,ball0_compressed); ballanim[0] = ball7;
+	zx7_Decompress(ball1,ball1_compressed); ballanim[1] = ball6;
+	zx7_Decompress(ball2,ball2_compressed); ballanim[2] = ball5;
+	zx7_Decompress(ball3,ball3_compressed); ballanim[3] = ball4; 
+	zx7_Decompress(ball4,ball4_compressed); ballanim[4] = ball3;
+	zx7_Decompress(ball5,ball5_compressed); ballanim[5] = ball2;
+	zx7_Decompress(ball6,ball6_compressed); ballanim[6] = ball1;
+	zx7_Decompress(ball7,ball7_compressed); ballanim[7] = ball0;
+	
+	init_xlate(0);
 	
 	state = GS_TITLE;
 	stage_state = 0;
 	hiscore = score = 0;  //change how hiscore is init'd later
-	tile_px_passed = tile_passed = 0;
+	lives = tile_px_passed = tile_passed = 0;
 	
 	ball_counter = 0;
 	ball_max_x = ball_min_x = translate[translate_last_usable+32].startx;
@@ -147,47 +163,70 @@ void main(void)
 	ball_max_x -= (32);
 	ball_x = ball_min_x;
 	ball_y_min = ball_y = (240-32-8);
-	jumping = 0;
+	going = jumping = 0;
+	curopt = 0;
+	maxopt = 4;
+	changePalette(title_palette);
 		
 	while (1) {
 		kb_Scan();
 		kdir = kb_Data[7];
 		kact = kb_Data[1];
 		
-		/*	TODO:
-			Change input handling methods to allow free-running, letting
-			each case handle their own debounce (e.g. continue-on-fail)
-		*/
-		
+	
 		//Quick exit without needing to resort to GOTOs.
 		if (state==GS_TITLE && kact&kb_Mode) break;
-		//LEAVE IN UNTIL WE HAVE AN ACTUAL TITLE SCREEN
-		if (kact&kb_Mode) break;
-		gfx_FillScreen(COLOR_WHITE);
 		
 		switch (state) {
 			case GS_TITLE   :
-				//Debugging: Immediately init and go to game mode.
-				memset(track,0,sizeof track);
-				genSection(-1);
-				genSection(1);  //block fill
-				genSection(stage_state);
-				state = GS_GAMEPLAY;
-				//tile_passed = tile_px_passed = 0;
-				tile_px_passed = 32;
-				tile_passed = 16;
-				jumping = 0;
+				if (kact&kb_2nd) {
+					memset(track,0,sizeof track);
+					genSection(-1);
+					genSection(1);  //block fill
+					genSection(stage_state);
+					state = GS_GAMEPLAY;
+					//tile_passed = tile_px_passed = 0;
+					tile_px_passed = 32;
+					tile_passed = 16;
+					going = jumping = 0;
+					lives = 5;
+					score = 0;
+					ball_x = (ball_min_x + ball_max_x - 32)/2;
+					changePalette(game_palette);
+					keywait();
+				} else {
+					if (kdir&kb_Down && curopt<2) ++curopt;
+					if (kdir&kb_Up   && curopt>0) --curopt;
+					drawTitleFrame();
+					drawMenu(titleopts,curopt,3);
+					gfx_SetTextFGColor(COLOR_BLACK);
+					gfx_SetTextScale(1,1);
+					gfx_PrintStringXY("High score: ",5,230);
+					if (hiscore<=999999)	gfx_PrintUInt(hiscore,6);
+					else					gfx_PrintString(">999999");
+				}
 				break;
 			
 			case GS_GAMEPLAY:
-				if (kact&kb_Mode) { keywait(); gfx_End(); return; }
+				gfx_Wait();
+				drawBG();
+				gfx_SetTextFGColor(COLOR_BLACK);
+				gfx_SetTextScale(1,1);
+				gfx_SetTextXY(5,5);
+				if (score<=999999)	gfx_PrintUInt(score,6);
+				else				gfx_PrintString("u broek score >:(");
+				if (kact&kb_Mode) { 
+					lives = 1;
+					state = GS_GAMEOVER;
+					continue;
+				}
 				if (kdir&kb_Left && ball_x>=ball_min_x) {
 					ball_x-=4;
 				}
 				if (kdir&kb_Right && ball_x<ball_max_x) {
 					ball_x+=4;
 				}
-				//TODO: COLLISION DETECTION.
+				if (kdir&kb_Up) going = 1;
 				if (!jumping) {
 					x = translate[translate_last_usable+32].startx;
 					for (j=0,k=1;j<4;++j,k<<=1) {
@@ -196,16 +235,14 @@ void main(void)
 					}
 					j = tile_passed+4;
 					//if (tile_px_passed+16 > 32) j++;
-					if (k&track[j]) {
-						gfx_PrintStringXY("ON",290,230);
-					} else {
-						gfx_PrintStringXY("OFF",290,230);
+					if (!(k&track[j])) {
 						state = GS_GAMEOVER;
+						continue;
 					}
 					//Located here to prevent infinite air-jumping
 					if (kact&kb_2nd && !jumping) jumping = 4;
 				} else {
-					jumping += 4;
+					jumping += 6;
 				}
 				//Let's just show a scrolling field for now.
 				//for (i=0;i<32;++i) {
@@ -215,28 +252,55 @@ void main(void)
 					//gfx_SwapDraw();
 				//}
 				//Move down
-				tile_px_passed += 4;
+				if (going) {
+					tile_px_passed += 4;
+					ball_counter += 1;
+				}
 				if (tile_px_passed>32) {
 					tile_px_passed -= 32;
 					tile_passed -= 1;
+					++score;
 					if (tile_passed<=0) {
+						score += 7;
 						tile_passed = 16;
 						genSection(stage_state);
 					}
 				}
 				//we need more frames.
-				ball_counter += 1;
-				i = (jumping&128)?(jumping&127)^127:jumping&127;
-				gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
+				i = (jumping&128)?(jumping&127)^127:jumping&127;  //0-127
+				//i = 127&((int)128*i*i-255*i);
+				i = QUADR(0,255,127,127,i);
+				j = i>>3;
+				k = 32+j;
+				j = j>>1;
+				((uint8_t*)curball)[0] = k;
+				((uint8_t*)curball)[1] = k;
+				gfx_ScaleSprite(ballanim[(ball_counter>>1)&7],curball);
+				//gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
+				gfx_TransparentSprite_NoClip(curball,ball_x-j,ball_y-(unsigned int)i-j);
 				break;
 			
 			case GS_GAMEOVER:
-				gfx_SetColor(0xBF); //idk what color this is.
-				gfx_FillRectangle(0,240/2-10,320,20);
-				gfx_PrintStringXY("OOF",160-12,120-4);
+				gfx_SetColor(0x00); //idk what color this is.
+				gfx_SetTextFGColor(COLOR_GOLD);
+				gfx_FillRectangle(0,(240/2-30/2),320,30);
+				--lives;
+				if (lives) {
+					if (lives>1) {
+						printTextCenter("Lives remaining",(240/2-30/2+5));
+						gfx_SetTextXY(((320-8)/2),(240/2-30/2+15));
+						gfx_PrintUInt(lives,1);
+					} else printTextCenter("Final life remain",(240/2-30/2+11));
+					for (i=3;i<5;++i) track[i+tile_passed] = 0xFF;
+					state = GS_GAMEPLAY;
+					going = 0;
+				} else {
+					printTextCenter("Game Over",(240/2-30/2+11));
+					state = GS_TITLE;
+				}
 				gfx_SwapDraw();
 				keyconfirm();
-				state = GS_TITLE;
+				if (state==GS_TITLE) changePalette(title_palette);
 				continue;
 				break;
 			
@@ -271,9 +335,8 @@ void keyconfirm(void) {
 
 
 void drawTitleFrame(void) {
-	gfx_SetTextScale(3,3);
-	gfx_SetTextFGColor(COLOR_BLACK);
-	printTextCenter("Plain Jump",10);
+	gfx_FillScreen(((uint8_t*)titlebanner)[2]);
+	gfx_Sprite(titlebanner,((320-255)/2),10);
 	gfx_SetTextScale(1,1);
 	gfx_PrintStringXY(VERSION,320-32,240-10);
 }
@@ -287,19 +350,22 @@ void printTextCenter(char *s,int y) {
 
 /* Vertically-centered menu */
 void drawMenu(char *sa[],uint8_t curopt,uint8_t maxopt) {
-	uint8_t i,y;
-	
-	y = (240 - (maxopt * 20)) / 2;
+	static int8_t shadow_offsets[] = {0,1,1,1,1,0};
+	uint8_t i,y,j;
+	y = ((240-(maxopt*25)+title_height) / 2) ;
 	gfx_SetTextScale(2,2);
-	
-	for (i=0; i<maxopt; ++i,y+=20) {
-		if (i==curopt) {
-			gfx_SetTextFGColor(COLOR_GOLD);
+	for (i=0; i<maxopt; ++i,y+=25) {
+		gfx_SetTextFGColor(COLOR_BLACK);  //draw shadow at btm-right
+		for (j=0;j<6;j+=2) {
+			gfx_PrintStringXY(
+				sa[i],
+				(320-gfx_GetStringWidth(sa[i]))/2+shadow_offsets[(j+0)],
+				y+shadow_offsets[(j+1)]
+			);
 		}
-		else {
-			gfx_SetTextFGColor(COLOR_BLACK);
-		}
-		printTextCenter(sa[i],y+4);
+		if (i==curopt)	gfx_SetTextFGColor(COLOR_GOLD);
+		else			gfx_SetTextFGColor(COLOR_GRAY);
+		printTextCenter(sa[i],y);
 	}
 }
 
@@ -380,11 +446,20 @@ void init_xlate(int angle) {
 	}
 }
 
+void changePalette(uint16_t *palette) {
+	gfx_SetPalette(palette,512,0);
+	blankScreen();
+	
+}
 
-
-
-
-
+void blankScreen() {
+	uint8_t i;
+	for (i=0;i<2;++i) {
+		gfx_FillScreen(255);
+		gfx_SwapDraw();
+		gfx_Wait();
+	}
+}
 
 
 

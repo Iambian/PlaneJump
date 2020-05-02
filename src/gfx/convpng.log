@@ -1,9 +1,19 @@
 opened convpng.ini
 
+--- palette pmain.png ---
+building palette with [256] available indices ...
+built palette with [5] indices.
+palette quality : 100.00%
+wrote palette image (out/pmain.png)
+
+--- palette ptitle.png ---
+building palette with [256] available indices ...
+built palette with [256] indices.
+palette quality : 97.42%
+wrote palette image (out/ptitle.png)
+
 --- sprites_gfx (C) ---
-using built-in xlibc palette ...
-transparent color index : 255
-transparent color : 0x0000
+using defined palette out/pmain.png ...
 8:
  ball0 : converted! (1026 > 94 bytes)
  ball1 : converted! (1026 > 107 bytes)
@@ -14,7 +24,12 @@ transparent color : 0x0000
  ball6 : converted! (1026 > 102 bytes)
  ball7 : converted! (1026 > 84 bytes)
 
-converted in 0 s
+--- title_gfx (C) ---
+using defined palette out/ptitle.png ...
+1:
+ title : converted! (17597 > 7793 bytes)
+
+converted in 1 s
 
 [warning] image quality might be too low.
 please try grouping similar images, reducing image colors, 

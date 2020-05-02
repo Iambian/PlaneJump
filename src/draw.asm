@@ -1,5 +1,6 @@
 .assume adl=1
 XDEF _drawGameField
+XDEF _drawBG
 
 ;an array of structs 10 bytes wide, containing 32+240+32 entries
 ;+0 ypos, +3 sx, +6 w1, +7 w2, +8 w3, +9 w4 
@@ -148,4 +149,25 @@ dgf_skipscanline:
 dgf_endnow:
 	pop ix
 	ret
+	
+	
+;Try to accelerate this later. Just accept the 30fps for now.
+_drawBG:
+	ld a,240
+	ld hl,(0E30014h)
+drawBG_loop:
+	ld (hl),a
+	ld bc,319
+	push hl
+	pop de
+	inc de
+	ldir
+	dec a
+	jr nz,drawBG_loop
+	ret
+	
+	
+	
+	
+	
 	

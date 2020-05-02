@@ -2,34 +2,37 @@ Segment  Base   Top    High   Length
 -------- ------ ------ ------ -------
 icon     D1A882 D1A994           112h
 launcher D1A994 D1A9EC            58h
-libs     D1A9EC D1AA41            55h
-startup  D1AA41 D1AA80            3Fh
-cleanup  D1AA80 D1AA94            14h
-exit     D1AA94 D1AA9A             6h
-code     D1AA9A D1B4E3           A49h
-data     D1B4E3 D1B854           371h
-strsect  D1B854 D1B86E            1Ah
-text     D1B86E D1B86E             0h
-bss      D031F6 D05E21 D13FD6   2C2Bh
+libs     D1A9EC D1AA61            75h
+startup  D1AA61 D1AAA0            3Fh
+cleanup  D1AAA0 D1AAB4            14h
+exit     D1AAB4 D1AABA             6h
+code     D1AABA D1B8B0           DF6h
+data     D1B8B0 D1DCAD          23FDh
+strsect  D1DCAD D1DD3B            8Eh
+text     D1DD3B D1DD3B             0h
+bss      D031F6 D0ADE0 D13FD6   7BEAh
 header   D1A87F D1A882             3h
 
 Label                           Value
 -----------------------------   ------
-_os_DisableHomeTextBuffer     = D1AA9A
-_os_EnableHomeTextBuffer      = D1AAAC
-_random                       = D1AABE
-__state                       = D1B4E3
-_zx7_Decompress               = D1AB15
+_os_DisableHomeTextBuffer     = D1AABA
+_os_EnableHomeTextBuffer      = D1AACC
+_random                       = D1AADE
+__state                       = D1B8B0
+_zx7_Decompress               = D1AB35
+__frameset0                   = D1ABA1
 __seqcase                     = 000210
-__frameset                    = D1AB81
+__frameset                    = D1ABAC
 __fmul                        = 000288
 __fsub                        = 000290
 __imul_b                      = 000158
 __imul_b                      = 000150
 __ishrs_b                     = 00017C
 __ishrs_b                     = 000180
-__fneg                        = D1AB8F
-_memset                       = D1AB9C
+__fneg                        = D1ABBA
+__ishru_b                     = 000184
+__ishru_b                     = 000188
+_memset                       = D1ABC7
 _memcpy                       = 0000A4
 __ior                         = 000168
 __idivs                       = 00013C
@@ -43,62 +46,83 @@ __ftol                        = 00027C
 __findlibload                 = D1A994
 __program_icon                = D1A887
 __program_description         = D1A989
-__ccleanup                    = D1AA80
+__ccleanup                    = D1AAA0
 _errno                        = D008DC
 _init                         = D1A882
-_exit                         = D1AA96
-__exit                        = D1AA6F
-__exitsp                      = D1AA6F
-__errsp                       = D1AA6F
-_ball0_compressed             = D1B515
-_ball1_compressed             = D1B573
-_ball2_compressed             = D1B5DE
-_ball3_compressed             = D1B649
-_ball4_compressed             = D1B6A0
-_ball5_compressed             = D1B708
-_ball6_compressed             = D1B774
-_ball7_compressed             = D1B7DA
-_init_xlate                   = D1B1E2
-_genSection                   = D1B14F
-_drawMenu                     = D1B0B8
-_printTextCenter              = D1B07D
-_drawTitleFrame               = D1B034
-_keyconfirm                   = D1B024
-_keywait                      = D1B01C
-_main                         = D1ABB3
-_ballanim                     = D05E09
-_ball7                        = D1B84F
+_exit                         = D1AAB6
+__exit                        = D1AA8F
+__exitsp                      = D1AA8F
+__errsp                       = D1AA8F
+_ball0_compressed             = D1B8E2
+_ball1_compressed             = D1B940
+_ball2_compressed             = D1B9AB
+_ball3_compressed             = D1BA16
+_ball4_compressed             = D1BA6D
+_ball5_compressed             = D1BAD5
+_ball6_compressed             = D1BB41
+_ball7_compressed             = D1BBA7
+_title_compressed             = D1BBFB
+_title_gfx_pal                = D1DA6C
+_blankScreen                  = D1B7BA
+_changePalette                = D1B798
+_init_xlate                   = D1B54A
+_genSection                   = D1B4B7
+_drawMenu                     = D1B388
+_printTextCenter              = D1B34D
+_drawTitleFrame               = D1B302
+_keyconfirm                   = D1B2F2
+_keywait                      = D1B2EA
+_main                         = D1ABDE
+_creditstext                  = D1DCA2
+_titleopts                    = D1DC99
+_title_palette                = D1DC96
+_game_palette                 = D0ABE0
+_titlebanner                  = D1DC93
+_titlebanner_data             = D06723
+_ballanim                     = D0670B
+_curball                      = D1DC90
+_curball_data                 = D05E09
+_ball7                        = D1DC8D
 _ball7_data                   = D05A07
-_ball6                        = D1B84C
+_ball6                        = D1DC8A
 _ball6_data                   = D05605
-_ball5                        = D1B849
+_ball5                        = D1DC87
 _ball5_data                   = D05203
-_ball4                        = D1B846
+_ball4                        = D1DC84
 _ball4_data                   = D04E01
-_ball3                        = D1B843
+_ball3                        = D1DC81
 _ball3_data                   = D049FF
-_ball2                        = D1B840
+_ball2                        = D1DC7E
 _ball2_data                   = D045FD
-_ball1                        = D1B83D
+_ball1                        = D1DC7B
 _ball1_data                   = D041FB
-_ball0                        = D1B83A
+_ball0                        = D1DC78
 _ball0_data                   = D03DF9
 _translate_last_usable        = D03DF6
 _translate                    = D03216
 _track                        = D031F6
-_empty_point                  = D1B82E
-_drawGameField                = D1B430
+_empty_point                  = D1DC6C
+_drawGameField                = D1B7E9
+_drawBG                       = D1B89C
 _gfx_Begin                    = D1A9FF
 _gfx_End                      = D1AA03
 _gfx_SetColor                 = D1AA07
-_gfx_FillScreen               = D1AA0B
-_gfx_SwapDraw                 = D1AA0F
-_gfx_PrintStringXY            = D1AA13
-_gfx_SetTextFGColor           = D1AA17
-_gfx_GetStringWidth           = D1AA1B
-_gfx_FillRectangle            = D1AA1F
-_gfx_TransparentSprite_NoClip = D1AA23
-_gfx_SetTextScale             = D1AA27
-_gfx_SetTransparentColor      = D1AA2B
-_kb_Scan                      = D1AA39
-_kb_AnyKey                    = D1AA3D
+_gfx_SetPalette               = D1AA0B
+_gfx_FillScreen               = D1AA0F
+_gfx_SwapDraw                 = D1AA13
+_gfx_PrintUInt                = D1AA17
+_gfx_PrintString              = D1AA1B
+_gfx_PrintStringXY            = D1AA1F
+_gfx_SetTextXY                = D1AA23
+_gfx_SetTextFGColor           = D1AA27
+_gfx_GetStringWidth           = D1AA2B
+_gfx_FillRectangle            = D1AA2F
+_gfx_Sprite                   = D1AA33
+_gfx_TransparentSprite_NoClip = D1AA37
+_gfx_SetTextScale             = D1AA3B
+_gfx_SetTransparentColor      = D1AA3F
+_gfx_Darken                   = D1AA43
+_gfx_ScaleSprite              = D1AA47
+_gfx_Wait                     = D1AA4B
+_kb_Scan                      = D1AA59
+_kb_AnyKey                    = D1AA5D
