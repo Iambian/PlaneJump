@@ -12,15 +12,26 @@ XREF _track
 ;iy+3=arg0, iy+6=arg1, iy+9=arg2 ...
 ;
 ;Note: 0E30014h is a pointer for the buffer
+;Note: 0E30200h is the start of the 512 byte color palette. (RGB 1555)
+;NOte: 0E30800h is the start of CursorImage (1KB of high speed memory)
 
-
-prev_scanline EQU -12  ;whyyyyy???? why can't it be -3 or -6?
+prev_scanline   EQU 4  ;re-use argument space for temp memory, as the ...
+cur_track_block EQU 5  ;... variable this overwrites isn't being used again
 
 tr_offset EQU 3
 px_offset EQU 6
+x_offset  EQU 9
 
-
+;Simple acceleration by copying to and running from high speed memory
 _drawGameField:
+	ld de,0E30800h
+	push de
+		ld hl,dgf_start
+		ld bc,dgf_end-dgf_start
+		ldir
+	pop hl
+	jp (hl)
+dgf_start:
 	ld iy,0
 	add iy,sp
 	push ix
@@ -75,68 +86,42 @@ dgf_skip_repro:
 		mlt hl
 		add hl,hl  ;finish multiply by 320
 		ld a,(de)
+		ld (iy+cur_track_block),a
 		push bc
-			ld bc,(ix+3)  ;startx
-			add hl,bc     ;offset complete.
-			ld bc,(0E30014h)
-			add hl,bc     ;address complete
-			ld bc,0       ;easy way to clear BCU
-			;first row
-			rra
-			ld c,(ix+6)
-			jr c,dgf_drawr1
-			add hl,bc
-			jr dgf_finishr1
-dgf_drawr1:
-			ld b,c
-			ld c,0
-dgf_loopr1:
-			ld (hl),c
-			inc hl
-			djnz dgf_loopr1
-dgf_finishr1:
-			;second row
-			rra
-			ld c,(ix+7)
-			jr c,dgf_drawr2
-			add hl,bc   ;b will have been set to 0 regardless of prior path
-			jr dgf_finishr2
-dgf_drawr2:
-			ld b,c
-			ld c,0
-dgf_loopr2:
-			ld (hl),c
-			inc hl
-			djnz dgf_loopr2
-dgf_finishr2:
-			;third row
-			rra
-			ld c,(ix+8)
-			jr c,dgf_drawr3
-			add hl,bc
-			jr dgf_finishr3
-dgf_drawr3:
-			ld b,c
-			ld c,0
-dgf_loopr3:
-			ld (hl),c
-			inc hl
-			djnz dgf_loopr3
-dgf_finishr3:
-			;fourth (last) row
-			rra
-			ld c,(ix+9)
-			jr c,dgf_drawr4
-			add hl,bc
-			jr dgf_finishr4
-dgf_drawr4:
-			ld b,c
-			ld c,0
-dgf_loopr4:
-			ld (hl),c
-			inc hl
-			djnz dgf_loopr4
-dgf_finishr4:
+			push de
+				ld bc,(iy+x_offset)
+				add hl,bc     ;apply x offset
+				ld bc,(0E30014h)
+				add hl,bc     ;add start address to buffer
+				ld bc,(ix+3)  ;
+				add hl,bc     ;add start x. BCU and B known zeroes here.
+				lea ix,ix+6
+				push hl
+				pop de
+				inc de        ;precompute HL+1 and keep tracking it
+				ld a,4
+dgf_drawloop:	
+				ld c,(ix+0)
+				rrc (iy+cur_track_block)
+				jr c,dgf_drawscan
+dgf_skipscan:	
+				add hl,bc
+				ex de,hl
+				add hl,bc
+				ex de,hl
+				jr dgf_finish
+dgf_drawscan:	
+				dec c
+				ld (hl),b
+				ldir
+				inc de
+				inc hl
+dgf_finish:		
+				inc ix
+				dec a
+				jr nz,dgf_drawloop
+				lea ix,ix-10
+			pop de
 		pop bc
 dgf_skipscanline:
 		dec c
@@ -149,24 +134,61 @@ dgf_skipscanline:
 dgf_endnow:
 	pop ix
 	ret
+dgf_end:
 	
+;accel notes.
+;106 pushes plus 2 more bytes writes to a complete row
+;
+;less inner: modify value
+;inner:      push value 106 times, increment sp, push once more
+;
+;
+;
 	
 ;Try to accelerate this later. Just accept the 30fps for now.
 _drawBG:
-	ld a,240
-	ld hl,(0E30014h)
-drawBG_loop:
-	ld (hl),a
-	ld bc,319
-	push hl
-	pop de
-	inc de
+	di
+	ld de,0E30800h
+	ld hl,drawbg_seg1_start
+	ld bc,drawbg_seg1_end-drawbg_seg1_start
 	ldir
-	dec a
-	jr nz,drawBG_loop
+	push hl
+		push de
+		pop hl
+		inc de
+		ld bc,105
+		ld (hl),0D5h  ;PUSH DE
+		ldir
+	pop hl  ;points to next step: drawbg_seg2_start
+	ld bc,drawbg_seg2_end-drawbg_seg2_start
+	ldir
+drawbg_routine_start:
+	ld iy,0
+	add iy,sp
+	ld hl,(0E30014h)
+	ld de,320*240
+	add hl,de
+	ld sp,hl
+	ld a,240
+	jp 0E30800h
+	
+;segment 1: loads DE with value to be pushing. Use IY-6 as scratch
+drawbg_seg1_start:
+	ld (iy-6+2),a ;3
+	ld de,(iy-6)  ;3: get A into DEU
+	ld e,a        ;1
+	ld d,a        ;1
+drawbg_seg1_end:
+;Immediately after seg1 is 106 instances of PUSH DE
+drawbg_seg2_start:
+	inc sp        ;1
+	push de       ;1
+	dec a         ;1
+	db 020h,-(11+106+2)  ;jr nz,[explicit offset] (+2 for itself)
+	ld sp,iy
+	ei
 	ret
-	
-	
+drawbg_seg2_end:
 	
 	
 	

@@ -13,6 +13,7 @@
 #define GS_GAMEPLAY 1
 #define GS_GAMEOVER 2
 #define GS_CREDITS 3
+#define GS_HELP 4
 #define GS_QUIT 255
 
 
@@ -27,7 +28,8 @@
 #define Q_CALCX(x1,x2,xv) ((xv*xv)-xv*(x1+x2)+x1*x2)
 #define Q_SOLVEA(x1,x2,xv,yv) (yv/Q_CALCX(x1,x2,xv))
 #define QUADR(x1,x2,xv,yv,curx) (Q_SOLVEA(x1,x2,xv,yv)*curx*curx-curx*(x1+x2)+x1*x2)
-
+#define GRAVITY ((int)(0.38 * 256))
+#define INITIAL_VELOCITY ((int)(9*256))
 
 /* Keep these headers */
 #include <stdbool.h>
@@ -49,6 +51,7 @@
 #include <compression.h>
 
 #include "draw.h"
+#include "levels.h"
 #include "gfx/out/sprites_gfx.h"
 #include "gfx/out/title_gfx.h"
 
@@ -70,8 +73,9 @@ void keywait(void);
 void keyconfirm(void);
 void printTextCenter(char *s,int y);
 void drawMenu(char *sa[],uint8_t curopt,uint8_t maxopt);
+void drawTextBlock(char *sa[],uint8_t sa_len);
 void drawTitleFrame(void);
-void genSection(int8_t gentype);  //generates latter 16 blocks of level
+void genSection(uint8_t init);  //generates latter 16 blocks of level
 void changePalette(uint16_t *palette);
 void blankScreen();               //prevents artifacting between palette swaps
 vector_t proj(vector_t point);
@@ -96,21 +100,31 @@ gfx_UninitedSprite(ball7,32,32);
 gfx_UninitedSprite(curball,48,48);
 gfx_sprite_t *ballanim[8];
 gfx_UninitedSprite(titlebanner,title_width,title_height);
-
-
+level_t *level_pack;     //level pack currently loaded
 
 uint16_t game_palette[256];
 uint16_t *title_palette = title_gfx_pal;
 
-char *titleopts[] = {"Start game","About","Quit"};
+char *titleopts[] = {"Start game","Help","About","Quit"};
+char *helptext[] = {
+	"[2nd]   : Makes the ball jump",
+	"[MODE]  : Quits the game",
+	"[Up]    : Makes the ball move forward",
+	"[Left]  : Makes the ball move left",
+	"[Right] : Makes the ball move right"
+};
 char *creditstext[] = {
-	"TODO: Add credits to this game."
-	
-	
+	"Based on Plain Jump 1.1 by Andreas Ess",
+	"Game written by Iambian",
+	"Coffee and sanity provided by Tim",
+	"Thanks Xeda and Eeems for suggestions",
+	"Thanks to the CodeBros Discord group",
+	"for putting up with my shenanigans",
 };
 void main(void)
 {
 	kb_key_t kdir,kact;
+	uint16_t temp16;
 	uint8_t state,i,j,k;
 	uint8_t stage_state;
 	int8_t tile_px_passed;  //0-32, is vertical offset of current tile.
@@ -123,21 +137,25 @@ void main(void)
 	int ball_min_x;
 	int ball_max_x;
 	uint8_t ball_y;
-	uint8_t ball_y_min;
-	uint8_t jumping;
+	int jumping;     //continue to use this as the y offset. is 16.8 fp
 	uint8_t going;
 	uint8_t lives;
 	uint8_t curopt,maxopt;
+	int y_velocity;  //16.8fp
+	int x_offset;    //for subtle shake effect on landing
 	
 	
 	gfx_Begin();
 	gfx_SetTransparentColor(COLOR_WHITE);
 	memcpy(game_palette,gfx_palette,512);
+	level_pack = levelpack; //INTERNAL LEVEL PACK
 	game_palette[COLOR_GOLD]  = gfx_RGBTo1555(0xFF,0xD7,0x00);
 	game_palette[COLOR_GRAY]  = gfx_RGBTo1555(0x90,0x90,0x80);
 	game_palette[COLOR_BLACK] = gfx_RGBTo1555(0x00,0x00,0x00);
 	for (i=1;i<241;++i) {
-		game_palette[242-i] = gfx_Darken(gfx_RGBTo1555(0x87,0xCE,0xEB),255-i);
+		//game_palette[i] = gfx_Darken(gfx_RGBTo1555(0x87,0xCE,0xEB),255-i);
+		temp16 = gfx_RGBTo1555(((0x80-i<0)?0:0x80-i),((0xCE -i<0)?0:0xCE -i),0xEB-(i>>2));
+		game_palette[i] = temp16;
 	}
 	zx7_Decompress(titlebanner,title_compressed);
 	
@@ -162,8 +180,8 @@ void main(void)
 	for (i=0;i<4;++i) ball_max_x += translate[translate_last_usable+32].w[i];
 	ball_max_x -= (32);
 	ball_x = ball_min_x;
-	ball_y_min = ball_y = (240-32-8);
-	going = jumping = 0;
+	ball_y = (240-32-8);
+	going = y_velocity = x_offset = jumping = 0;
 	curopt = 0;
 	maxopt = 4;
 	changePalette(title_palette);
@@ -173,32 +191,39 @@ void main(void)
 		kdir = kb_Data[7];
 		kact = kb_Data[1];
 		
-	
 		//Quick exit without needing to resort to GOTOs.
-		if (state==GS_TITLE && kact&kb_Mode) break;
+		if (state == GS_QUIT) break;
 		
 		switch (state) {
 			case GS_TITLE   :
+				srandom(random());  //cycle the seeds for RNG
 				if (kact&kb_2nd) {
-					memset(track,0,sizeof track);
-					genSection(-1);
-					genSection(1);  //block fill
-					genSection(stage_state);
-					state = GS_GAMEPLAY;
-					//tile_passed = tile_px_passed = 0;
-					tile_px_passed = 32;
-					tile_passed = 16;
-					going = jumping = 0;
-					lives = 5;
-					score = 0;
-					ball_x = (ball_min_x + ball_max_x - 32)/2;
-					changePalette(game_palette);
-					keywait();
+					if (!curopt) {
+						genSection(0);
+						state = GS_GAMEPLAY;
+						//tile_passed = tile_px_passed = 0;
+						tile_px_passed = 32;
+						tile_passed = 16;
+						going = jumping = 0;
+						lives = 5;
+						score = 0;
+						ball_x = (ball_min_x + ball_max_x - 32)/2;
+						changePalette(game_palette);
+						keywait();
+					} else if (curopt == 1) {
+						state = GS_HELP;
+					} else if (curopt == 2) {
+						state = GS_CREDITS;
+					} else if (curopt == 3) {
+						state = GS_QUIT;
+					}
+						
 				} else {
-					if (kdir&kb_Down && curopt<2) ++curopt;
+					if (kact&kb_Mode) state = GS_QUIT;
+					if (kdir&kb_Down && curopt<3) ++curopt;
 					if (kdir&kb_Up   && curopt>0) --curopt;
 					drawTitleFrame();
-					drawMenu(titleopts,curopt,3);
+					drawMenu(titleopts,curopt,4);
 					gfx_SetTextFGColor(COLOR_BLACK);
 					gfx_SetTextScale(1,1);
 					gfx_PrintStringXY("High score: ",5,230);
@@ -221,10 +246,10 @@ void main(void)
 					continue;
 				}
 				if (kdir&kb_Left && ball_x>=ball_min_x) {
-					ball_x-=4;
+					ball_x-=6;
 				}
 				if (kdir&kb_Right && ball_x<ball_max_x) {
-					ball_x+=4;
+					ball_x+=6;
 				}
 				if (kdir&kb_Up) going = 1;
 				if (!jumping) {
@@ -240,15 +265,22 @@ void main(void)
 						continue;
 					}
 					//Located here to prevent infinite air-jumping
-					if (kact&kb_2nd && !jumping) jumping = 4;
+					if (kact&kb_2nd && !jumping) {
+						y_velocity = jumping = INITIAL_VELOCITY;
+					}
 				} else {
-					jumping += 6;
+					y_velocity -= GRAVITY;
+					jumping += y_velocity;
+					if (jumping <= 0) {
+						jumping = 0;
+						x_offset = 1;
+					}
 				}
 				//Let's just show a scrolling field for now.
 				//for (i=0;i<32;++i) {
 					//slow down rendering significantly
 					//gfx_FillScreen(COLOR_WHITE);
-					drawGameField(tile_passed,tile_px_passed);
+					drawGameField(tile_passed,tile_px_passed,x_offset);
 					//gfx_SwapDraw();
 				//}
 				//Move down
@@ -263,21 +295,21 @@ void main(void)
 					if (tile_passed<=0) {
 						score += 7;
 						tile_passed = 16;
-						genSection(stage_state);
+						genSection(1);
 					}
 				}
 				//we need more frames.
-				i = (jumping&128)?(jumping&127)^127:jumping&127;  //0-127
-				//i = 127&((int)128*i*i-255*i);
-				i = QUADR(0,255,127,127,i);
-				j = i>>3;
-				k = 32+j;
-				j = j>>1;
+				i = 127&(jumping>>8);
+				j = i>>3;  //scale ball size between 0-15 -> 32-47 wrt yoffset
+				k = 32+j;  //get new width of ball given height
+				j = j>>1;  //retain ball centering by adjusting based on new w
 				((uint8_t*)curball)[0] = k;
 				((uint8_t*)curball)[1] = k;
 				gfx_ScaleSprite(ballanim[(ball_counter>>1)&7],curball);
 				//gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
 				gfx_TransparentSprite_NoClip(curball,ball_x-j,ball_y-(unsigned int)i-j);
+				if (x_offset == 1) x_offset = -1;
+				if (x_offset == -1) x_offset = 0;
 				break;
 			
 			case GS_GAMEOVER:
@@ -288,14 +320,21 @@ void main(void)
 				if (lives) {
 					if (lives>1) {
 						printTextCenter("Lives remaining",(240/2-30/2+5));
-						gfx_SetTextXY(((320-8)/2),(240/2-30/2+15));
+						gfx_SetTextXY(((320-8)/2),(240/2-30/2+18));
 						gfx_PrintUInt(lives,1);
-					} else printTextCenter("Final life remain",(240/2-30/2+11));
+					} else printTextCenter("This is your last chance",(240/2-30/2+11));
 					for (i=3;i<5;++i) track[i+tile_passed] = 0xFF;
 					state = GS_GAMEPLAY;
 					going = 0;
 				} else {
-					printTextCenter("Game Over",(240/2-30/2+11));
+					if (score > hiscore) {
+						y = (240/2-30/2+5);
+						printTextCenter("You achieved a new high score!",(240/2-30/2+18));
+						hiscore = score;
+					} else {
+						y = (240/2-30/2+11);
+					}
+					printTextCenter("Game Over",y);
 					state = GS_TITLE;
 				}
 				gfx_SwapDraw();
@@ -303,10 +342,19 @@ void main(void)
 				if (state==GS_TITLE) changePalette(title_palette);
 				continue;
 				break;
-			
-			case GS_CREDITS :
+				
+			case GS_HELP :
+				if (kact) state = GS_TITLE;
+				drawTitleFrame();
+				drawTextBlock(helptext,5);
 				break;
 			
+			case GS_CREDITS :
+				if (kact) state = GS_TITLE;
+				drawTitleFrame();
+				drawTextBlock(creditstext,6);
+				break;
+				
 			default:
 				break;
 		}
@@ -368,39 +416,86 @@ void drawMenu(char *sa[],uint8_t curopt,uint8_t maxopt) {
 		printTextCenter(sa[i],y);
 	}
 }
+void drawTextBlock(char *sa[],uint8_t sa_len) {
+	uint8_t i,w,y;
+	int x;
+	gfx_SetTextScale(1,1);
+	gfx_SetTextFGColor(COLOR_BLACK);
+	y = (240 + title_height - 12 - sa_len*12)/2;
+	for (i=0;i<sa_len;++i,y+=12) {
+		x = (320-gfx_GetStringWidth(sa[i]))/2;
+		gfx_PrintStringXY(sa[i],x,y);
+	}
+}
 
-void genSection(int8_t gentype) {
-	uint8_t i,d;
-	uint24_t dt;
-	static uint8_t state=0;
-	static uint8_t counter=0;
-	
-	memcpy(&track[16],&track[0],16);
-	//reinits state to beginning for level progression purposes
-	if (gentype == -1) {
-		state = 0;
-		return;
-	}
-	//randgen, 2-wide blocks
-	if (!gentype) {
-		for (i=0;i<16;i+=1) {
-			dt = random();
-			d = (dt&255)^((dt>>8)&255)^((dt>>16)&255);
-			//DEBUG
-			d = counter++;
-			//END DEBUG
-			
-			track[i] = d;
-			//track[i+1] = d;
-		}
-	}
-	//fill in starting arena
-	if (gentype==1) {
-		for (i=0;i<16;++i) {
-			track[i] = 0xFF;
-		}
-	}
+//TODO: FIGURE OUT A WAY TO LOAD LEVELS WHICH DOESN'T TURN THIS CODE
+//      INTO A HELLBISCUIT.
+//TODO: Embed into level meta struct autogenned segment types
+
+
+
+void genSection_Solid(void) {
+	memset(track,0xFF,16);
 	return;
+}
+void genSection_Random(void) {
+	uint8_t i,d;
+	uint32_t dt;
+	for (i=0;i<16;i+=2) {
+		dt = random();
+		track[i+1] = track[i] = (dt&255)^((dt>>8)&255)^((dt>>16)&255);
+	}
+}
+void genSection_BinaryFill(void) {
+	uint8_t i,d;
+	for (i=0,d=3&random();i<16;++i) track[i] = ((i<<d)|((i&15)>>(4-d)));
+}
+//Return vals: 0=success, 1=(end of level) 2=(end of level pack)
+//uses global level_pack to read in current level pack.
+uint8_t genSection_LoadLevel(uint8_t level, uint8_t section) {
+	uint8_t i,*s,*d;
+	level_t *L;
+	L = &level_pack[level];
+	if (!L->num_segments) return 2;
+	if (section >= L->num_segments) return 1;
+	switch (L->level_type) {
+		case LEVEL_TYPE_NORMAL:
+			s = L->leveldata + (16*section);
+			d = track + 15;
+			for (i=0;i<16;++i,--d,++s) *d = *s;
+			break;
+		case LEVEL_TYPE_RANDOM:
+			genSection_Random();
+			break;
+		case LEVEL_TYPE_BINARY:
+			genSection_BinaryFill();
+			break;
+		default: return 1; // Unknown level type. skip to next level.
+	}
+	return 0;
+}
+
+void genSection_AdvanceLevel(void) {
+	memcpy(track+16,track,16);
+}
+	
+void genSection(uint8_t init) {
+	static uint8_t state=0;
+	static uint8_t count=0;
+	uint8_t result;
+	
+	genSection_AdvanceLevel();
+	if (init) {
+		count = state = 0;
+		genSection_Solid();
+		genSection_AdvanceLevel();
+		genSection_LoadLevel(state,count++);
+		genSection_AdvanceLevel();
+	} else {
+		result = genSection_LoadLevel(state,count++);
+		if (result==2) genSection_Random();
+		if (result==1) genSection_LoadLevel(++state,count=0);
+	}
 }
 
 
@@ -447,8 +542,8 @@ void init_xlate(int angle) {
 }
 
 void changePalette(uint16_t *palette) {
-	gfx_SetPalette(palette,512,0);
 	blankScreen();
+	gfx_SetPalette(palette,512,0);
 	
 }
 
