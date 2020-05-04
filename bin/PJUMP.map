@@ -7,9 +7,9 @@ startup  D1AA7B D1AABA            3Fh
 cleanup  D1AABA D1AACE            14h
 exit     D1AACE D1AAD4             6h
 code     D1AAD4 D1C09B          15C7h
-data     D1C09B D1F0A5          300Ah
-strsect  D1F0A5 D1F321           27Ch
-text     D1F321 D1F321             0h
+data     D1C09B D1D964          18C9h
+strsect  D1D964 D1DBE0           27Ch
+text     D1DBE0 D1DBE0             0h
 bss      D031F6 D0BDF1 D13FD6   8BFBh
 header   D1A87F D1A882             3h
 
@@ -190,21 +190,17 @@ _ball5_compressed               = D1C2C0
 _ball6_compressed               = D1C32C
 _ball7_compressed               = D1C392
 _explode_gfx_pal                = D1C3E6
-_explosion_ts_tiles_compressed  = D1CF74
-_explosion_ts_tile_9_compressed = D1CF13
-_explosion_ts_tile_8_compressed = D1CE25
-_explosion_ts_tile_7_compressed = D1CD05
-_explosion_ts_tile_6_compressed = D1CB66
-_explosion_ts_tile_5_compressed = D1C9D0
-_explosion_ts_tile_4_compressed = D1C826
-_explosion_ts_tile_3_compressed = D1C6D1
-_explosion_ts_tile_2_compressed = D1C5B3
-_explosion_ts_tile_1_compressed = D1C48A
+_explosion_ts_tiles_compressed  = D1CAF2
+_explosion_ts_tile_5_compressed = D1CA91
+_explosion_ts_tile_4_compressed = D1C9A3
+_explosion_ts_tile_3_compressed = D1C804
+_explosion_ts_tile_2_compressed = D1C66E
+_explosion_ts_tile_1_compressed = D1C519
 _explosion_ts_tile_0_compressed = D1C3F0
-_title_compressed               = D1CF92
-_title_gfx_pal                  = D1EE03
-_levelpack                      = D1F033
-_level1                         = D1F003
+_title_compressed               = D1CB04
+_title_gfx_pal                  = D1D6C2
+_levelpack                      = D1D8F2
+_level1                         = D1D8C2
 _blankScreen                    = D1BF4C
 _changePalette                  = D1BF2A
 _init_xlate                     = D1BCDC
@@ -221,40 +217,40 @@ _drawTitleFrame                 = D1B82C
 _keyconfirm                     = D1B81C
 _keywait                        = D1B814
 _main                           = D1AC0F
-_creditstext                    = D1F088
-_helptext                       = D1F079
-_titleopts                      = D1F06D
-_title_palette                  = D1F06A
+_creditstext                    = D1D947
+_helptext                       = D1D938
+_titleopts                      = D1D92C
+_title_palette                  = D1D929
 _game_palette                   = D0BBF1
 _level_pack                     = D0BBEE
-_titlebanner                    = D1F067
+_titlebanner                    = D1D926
 _titlebanner_data               = D07731
 _ballanim                       = D07719
-_explosion                      = D1F064
+_explosion                      = D1D923
 _explosion_data                 = D06717
-_curball                        = D1F061
+_curball                        = D1D920
 _curball_data                   = D05E15
-_ball7                          = D1F05E
+_ball7                          = D1D91D
 _ball7_data                     = D05A13
-_ball6                          = D1F05B
+_ball6                          = D1D91A
 _ball6_data                     = D05611
-_ball5                          = D1F058
+_ball5                          = D1D917
 _ball5_data                     = D0520F
-_ball4                          = D1F055
+_ball4                          = D1D914
 _ball4_data                     = D04E0D
-_ball3                          = D1F052
+_ball3                          = D1D911
 _ball3_data                     = D04A0B
-_ball2                          = D1F04F
+_ball2                          = D1D90E
 _ball2_data                     = D04609
-_ball1                          = D1F04C
+_ball1                          = D1D90B
 _ball1_data                     = D04207
-_ball0                          = D1F049
+_ball0                          = D1D908
 _ball0_data                     = D03E05
 _translate_last_usable          = D03E02
 _translate                      = D03222
 _track                          = D03202
 _gamedata                       = D031F6
-_empty_point                    = D1F03D
+_empty_point                    = D1D8FC
 _drawGameField                  = D1BF7B
 _drawBG                         = D1C051
 _ti_CloseAll                    = D1AA00

@@ -1,10 +1,18 @@
 /*
  *--------------------------------------
- * Program Name: Plain Jump
+ * Program Name: Plane Jump
  * Author: idk anymore
  * License: rawrf.
  * Description: rawrf.
  *--------------------------------------
+*/
+
+/* TODO: MAYBE ADD ACTUAL LEVELS INSTEAD OF SOME PIECE OF CRAP INITIAL 
+   THING WHICH IS BUGGED TO HELL AND THEN RELY ON THE RANDOM NUMBER GOD
+   TO GENERATE FAVOR WITH THE MASSES.
+   
+   AND MAYBE SIZE-OPTIMIZE THE GAME ITSELF. Because making the graphics
+   crappier to get them to compress better shouldn't be the go-to solution.
 */
 
 #define VERSION "v0.1"
@@ -378,7 +386,7 @@ void main(void)
 				gfx_Wait();
 				drawBG();
 				drawGameField(tile_passed,tile_px_passed,x_offset);
-				if (ball_counter<10) {
+				if (ball_counter<6) {
 					zx7_Decompress(curball,explosion_ts_tiles_compressed[ball_counter]);
 					for (idx=2;idx<(48*48+2);++idx) {
 						((uint8_t*)curball)[idx] += COLOR_EXPLODESTART;
