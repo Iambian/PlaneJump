@@ -16,6 +16,8 @@
 #define GS_HELP 4
 #define GS_QUIT 255
 
+#define GEN_INIT 1
+#define GEN_CONTINUE 0
 
 //These color things. Most of them are guesses.
 //My eyes are not clever things.
@@ -199,7 +201,7 @@ void main(void)
 				srandom(random());  //cycle the seeds for RNG
 				if (kact&kb_2nd) {
 					if (!curopt) {
-						genSection(0);
+						genSection(GEN_INIT);
 						state = GS_GAMEPLAY;
 						//tile_passed = tile_px_passed = 0;
 						tile_px_passed = 32;
@@ -295,7 +297,7 @@ void main(void)
 					if (tile_passed<=0) {
 						score += 7;
 						tile_passed = 16;
-						genSection(1);
+						genSection(GEN_CONTINUE);
 					}
 				}
 				//we need more frames.
@@ -489,12 +491,12 @@ void genSection(uint8_t init) {
 		count = state = 0;
 		genSection_Solid();
 		genSection_AdvanceLevel();
-		genSection_LoadLevel(state,count++);
-		genSection_AdvanceLevel();
+		genSection_LoadLevel(state,0);
+		//genSection_AdvanceLevel();
 	} else {
-		result = genSection_LoadLevel(state,count++);
-		if (result==2) genSection_Random();
+		result = genSection_LoadLevel(state,++count);
 		if (result==1) genSection_LoadLevel(++state,count=0);
+		if (result==2) genSection_Random();
 	}
 }
 

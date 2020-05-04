@@ -6,10 +6,10 @@ libs     D1A9EC D1AA5D            71h
 startup  D1AA5D D1AA9C            3Fh
 cleanup  D1AA9C D1AAB0            14h
 exit     D1AAB0 D1AAB6             6h
-code     D1AAB6 D1BD05          124Fh
-data     D1BD05 D1E15D          2458h
-strsect  D1E15D D1E369           20Ch
-text     D1E369 D1E369             0h
+code     D1AAB6 D1BCF7          1241h
+data     D1BCF7 D1E14F          2458h
+strsect  D1E14F D1E35B           20Ch
+text     D1E35B D1E35B             0h
 bss      D031F6 D0ADE3 D13FD6   7BEDh
 header   D1A87F D1A882             3h
 
@@ -20,7 +20,7 @@ _os_EnableHomeTextBuffer      = D1AAC8
 _srandom                      = D1AADA
 __setstate                    = D1AAE1
 _random                       = D1AAF1
-__state                       = D1BD05
+__state                       = D1BCF7
 _zx7_Decompress               = D1AB48
 __frameset0                   = D1ABB4
 __seqcase                     = 000210
@@ -59,21 +59,21 @@ _exit                         = D1AAB2
 __exit                        = D1AA8B
 __exitsp                      = D1AA8B
 __errsp                       = D1AA8B
-_ball0_compressed             = D1BD37
-_ball1_compressed             = D1BD95
-_ball2_compressed             = D1BE00
-_ball3_compressed             = D1BE6B
-_ball4_compressed             = D1BEC2
-_ball5_compressed             = D1BF2A
-_ball6_compressed             = D1BF96
-_ball7_compressed             = D1BFFC
-_title_compressed             = D1C050
-_title_gfx_pal                = D1DEC1
-_levelpack                    = D1E0F1
-_level1                       = D1E0C1
-_blankScreen                  = D1BBE0
-_changePalette                = D1BBBE
-_init_xlate                   = D1B970
+_ball0_compressed             = D1BD29
+_ball1_compressed             = D1BD87
+_ball2_compressed             = D1BDF2
+_ball3_compressed             = D1BE5D
+_ball4_compressed             = D1BEB4
+_ball5_compressed             = D1BF1C
+_ball6_compressed             = D1BF88
+_ball7_compressed             = D1BFEE
+_title_compressed             = D1C042
+_title_gfx_pal                = D1DEB3
+_levelpack                    = D1E0E3
+_level1                       = D1E0B3
+_blankScreen                  = D1BBD2
+_changePalette                = D1BBB0
+_init_xlate                   = D1B962
 _genSection                   = D1B8DF
 _genSection_AdvanceLevel      = D1B8C8
 _genSection_LoadLevel         = D1B80D
@@ -87,39 +87,39 @@ _drawTitleFrame               = D1B4B2
 _keyconfirm                   = D1B4A2
 _keywait                      = D1B49A
 _main                         = D1ABF1
-_creditstext                  = D1E143
-_helptext                     = D1E134
-_titleopts                    = D1E128
-_title_palette                = D1E125
+_creditstext                  = D1E135
+_helptext                     = D1E126
+_titleopts                    = D1E11A
+_title_palette                = D1E117
 _game_palette                 = D0ABE3
 _level_pack                   = D0ABE0
-_titlebanner                  = D1E122
+_titlebanner                  = D1E114
 _titlebanner_data             = D06723
 _ballanim                     = D0670B
-_curball                      = D1E11F
+_curball                      = D1E111
 _curball_data                 = D05E09
-_ball7                        = D1E11C
+_ball7                        = D1E10E
 _ball7_data                   = D05A07
-_ball6                        = D1E119
+_ball6                        = D1E10B
 _ball6_data                   = D05605
-_ball5                        = D1E116
+_ball5                        = D1E108
 _ball5_data                   = D05203
-_ball4                        = D1E113
+_ball4                        = D1E105
 _ball4_data                   = D04E01
-_ball3                        = D1E110
+_ball3                        = D1E102
 _ball3_data                   = D049FF
-_ball2                        = D1E10D
+_ball2                        = D1E0FF
 _ball2_data                   = D045FD
-_ball1                        = D1E10A
+_ball1                        = D1E0FC
 _ball1_data                   = D041FB
-_ball0                        = D1E107
+_ball0                        = D1E0F9
 _ball0_data                   = D03DF9
 _translate_last_usable        = D03DF6
 _translate                    = D03216
 _track                        = D031F6
-_empty_point                  = D1E0FB
-_drawGameField                = D1BC0F
-_drawBG                       = D1BCBB
+_empty_point                  = D1E0ED
+_drawGameField                = D1BC01
+_drawBG                       = D1BCAD
 _gfx_Begin                    = D1A9FF
 _gfx_End                      = D1AA03
 _gfx_SetColor                 = D1AA07
