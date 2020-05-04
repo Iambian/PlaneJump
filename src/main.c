@@ -11,10 +11,11 @@
 
 #define GS_TITLE 0
 #define GS_GAMEPLAY 1
-#define GS_FALLING 5
 #define GS_GAMEOVER 2
 #define GS_CREDITS 3
 #define GS_HELP 4
+#define GS_FALLING 5
+#define GS_QUITTING 6
 #define GS_QUIT 255
 
 #define GEN_INIT 1
@@ -27,6 +28,10 @@
 #define COLOR_GRAY  253
 #define COLOR_DGRAY 252
 #define COLOR_BLACK 0
+//Reserved range of colors
+#define COLOR_EXPLODESTART 245
+#define COLOR_EXPLODEEND   250
+//End range
 #define COLOR_TRANSPARENT COLOR_WHITE
 
 #define Q_CALCX(x1,x2,xv) ((xv*xv)-xv*(x1+x2)+x1*x2)
@@ -58,6 +63,7 @@
 #include "levels.h"
 #include "gfx/out/sprites_gfx.h"
 #include "gfx/out/title_gfx.h"
+#include "gfx/out/explode_gfx.h"
 
 typedef struct thing {
 	int ypos;
@@ -71,6 +77,13 @@ typedef struct thing2 { // :)
 	float z;
 } vector_t;
 
+typedef struct anotherthing {
+	unsigned int hiscore;
+	unsigned int number_of_times_ran;
+	unsigned int number_of_times_quitted;
+	unsigned int number_of_times_died;
+} gamedata_t;
+
 vector_t empty_point = {0.0f,0.0f,0.0f};
 //Function prototypes
 void keywait(void);
@@ -83,6 +96,7 @@ void genSection(uint8_t init);  //generates latter 16 blocks of level
 void changePalette(uint16_t *palette);
 void blankScreen();               //prevents artifacting between palette swaps
 vector_t proj(vector_t point);
+gamedata_t gamedata;
 
 void init_xlate(int angle);
 //void drawGameField(uint8_t tile_offset,uint8_t pixel_offset);
@@ -102,6 +116,7 @@ gfx_UninitedSprite(ball5,32,32);
 gfx_UninitedSprite(ball6,32,32);
 gfx_UninitedSprite(ball7,32,32);
 gfx_UninitedSprite(curball,48,48);
+gfx_UninitedSprite(explosion,64,64);
 gfx_sprite_t *ballanim[8];
 gfx_UninitedSprite(titlebanner,title_width,title_height);
 level_t *level_pack;     //level pack currently loaded
@@ -129,15 +144,15 @@ char *creditstext[] = {
 };
 void main(void)
 {
+	ti_var_t file;
 	kb_key_t kdir,kact;
 	uint16_t temp16;
 	uint8_t state,i,j,k;
-	uint8_t stage_state;
 	uint8_t tile_px_passed;  //0-32, is vertical offset of current tile.
 	int8_t tile_passed;     //increments. once 16, reset and gen new section
 	int x,tx;
 	uint8_t y,ty;
-	int score,hiscore;
+	int score;
 	uint8_t ball_counter;    //0-7, index to ballanim
 	int ball_x;
 	int ball_min_x;
@@ -149,6 +164,7 @@ void main(void)
 	uint8_t curopt,maxopt;
 	int y_velocity;  //16.8fp
 	int x_offset;    //for subtle shake effect on landing
+	int idx;         //liek i, except longer.
 	
 	
 	gfx_Begin();
@@ -159,6 +175,7 @@ void main(void)
 	game_palette[COLOR_GRAY]  = gfx_RGBTo1555(0x90,0x90,0x80);
 	game_palette[COLOR_DGRAY] = gfx_RGBTo1555(0x40,0x40,0x40);
 	game_palette[COLOR_BLACK] = gfx_RGBTo1555(0x00,0x00,0x00);
+	memcpy(&game_palette[COLOR_EXPLODESTART],explode_gfx_pal,sizeof_explode_gfx_pal);
 	for (i=1;i<241;++i) {
 		//game_palette[i] = gfx_Darken(gfx_RGBTo1555(0x87,0xCE,0xEB),255-i);
 		temp16 = gfx_RGBTo1555(((0x80-i<0)?0:0x80-i),((0xCE -i<0)?0:0xCE -i),0xEB-(i>>2));
@@ -178,8 +195,7 @@ void main(void)
 	init_xlate(0);
 	
 	state = GS_TITLE;
-	stage_state = 0;
-	hiscore = score = 0;  //change how hiscore is init'd later
+	score = 0;
 	lives = tile_px_passed = tile_passed = 0;
 	
 	ball_counter = 0;
@@ -192,6 +208,15 @@ void main(void)
 	curopt = 0;
 	maxopt = 4;
 	changePalette(title_palette);
+	
+	//Reading previously saved data
+	ti_CloseAll();  //must use before any file i/o can be used
+	//single-equal is correct. assigning result of open to file
+	if (file=ti_Open("PlJmpDat","r")) {
+		ti_Read(&gamedata,1,sizeof gamedata,file);
+	} else {
+		memset(&gamedata,0,sizeof gamedata);
+	}
 		
 	while (1) {
 		kb_Scan();
@@ -215,6 +240,7 @@ void main(void)
 						lives = 5;
 						score = 0;
 						ball_x = (ball_min_x + ball_max_x - 32)/2;
+						gamedata.number_of_times_ran++;
 						changePalette(game_palette);
 						keywait();
 					} else if (curopt == 1) {
@@ -234,8 +260,8 @@ void main(void)
 					gfx_SetTextFGColor(COLOR_BLACK);
 					gfx_SetTextScale(1,1);
 					gfx_PrintStringXY("High score: ",5,230);
-					if (hiscore<=999999)	gfx_PrintUInt(hiscore,6);
-					else					gfx_PrintString(">999999");
+					if (gamedata.hiscore<=999999)	gfx_PrintUInt(gamedata.hiscore,6);
+					else							gfx_PrintString(">999999");
 				}
 				break;
 			
@@ -249,7 +275,9 @@ void main(void)
 				else				gfx_PrintString("u broek score >:(");
 				if (kact&kb_Mode) { 
 					lives = 1;
-					state = GS_GAMEOVER;
+					state = GS_QUITTING;
+					ball_counter = 0;
+					gamedata.number_of_times_quitted++;
 					continue;
 				}
 				if (kdir&kb_Left && ball_x>=ball_min_x) {
@@ -317,6 +345,7 @@ void main(void)
 				if (ball_y > (1000)) {
 					tile_px_passed = 0;
 					state = GS_GAMEOVER;
+					gamedata.number_of_times_died++;
 					keywait();
 					continue;
 				}
@@ -340,6 +369,32 @@ void main(void)
 				// gfx_PrintUInt(tile_px_passed,3);
 				drawGameField(tile_passed,tile_px_passed,x_offset);
 				break;
+				
+			case GS_QUITTING:
+				if (ball_counter>=30) {
+					state = GS_GAMEOVER;
+					continue;
+				}
+				gfx_Wait();
+				drawBG();
+				drawGameField(tile_passed,tile_px_passed,x_offset);
+				if (ball_counter<10) {
+					zx7_Decompress(curball,explosion_ts_tiles_compressed[ball_counter]);
+					for (idx=2;idx<(48*48+2);++idx) {
+						((uint8_t*)curball)[idx] += COLOR_EXPLODESTART;
+					}
+					idx = 8+32;
+					if (jumping) idx = (127&(jumping>>8)+16);
+					gfx_SetTransparentColor(((uint8_t*)curball)[2]);
+					((int*)explosion)[0] = (64+(256*64)); //sprdims: 64w,64h
+					gfx_ScaleSprite(curball,explosion);
+					gfx_TransparentSprite(explosion,ball_x-16,ball_y-idx);
+					gfx_SetTransparentColor(COLOR_WHITE);
+				}
+				/*
+				*/
+				++ball_counter;
+				break;
 			
 			case GS_GAMEOVER:
 				ball_y = (240-32-8);  //reset after ball falls off edge
@@ -355,12 +410,12 @@ void main(void)
 					} else printTextCenter("This is your last chance",(240/2-30/2+11));
 					for (i=3;i<5;++i) track[i+tile_passed] = 0xFF;
 					state = GS_GAMEPLAY;
-					going = 0;
+					jumping = going = 0;
 				} else {
-					if (score > hiscore) {
+					if (score > gamedata.hiscore) {
 						y = (240/2-30/2+5);
 						printTextCenter("You achieved a new high score!",(240/2-30/2+18));
-						hiscore = score;
+						gamedata.hiscore = score;
 					} else {
 						y = (240/2-30/2+11);
 					}
@@ -377,6 +432,18 @@ void main(void)
 				if (kact) state = GS_TITLE;
 				drawTitleFrame();
 				drawTextBlock(helptext,5);
+				//
+				gfx_SetTextXY(5,230);
+				gfx_PrintUInt(gamedata.number_of_times_ran,6);
+				gfx_PrintString(" - Runs");
+				//
+				gfx_SetTextXY(5,220);
+				gfx_PrintUInt(gamedata.number_of_times_quitted,6);
+				gfx_PrintString(" - Quits");
+				//
+				gfx_SetTextXY(5,210);
+				gfx_PrintUInt(gamedata.number_of_times_died,6);
+				gfx_PrintString(" - Deaths");
 				break;
 			
 			case GS_CREDITS :
@@ -396,8 +463,17 @@ void main(void)
 			keywait();
 		}
 	}
-	
+
 	gfx_End();
+	
+	//Saving game data.
+	if (file=ti_Open("PlJmpDat","w")) {
+		ti_Write(&gamedata,1,sizeof gamedata, file);
+	} else {
+		asm_ClrLCDFull();
+		os_NewLine();
+		os_PutStrFull("Could not save game data.");
+	}
     return;
 }
 
