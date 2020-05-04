@@ -1,0 +1,3 @@
+/src/gfx/out/*
+!src/gfx/out/PLACEHOLDER.txt
+/obj
