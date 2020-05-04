@@ -1,6 +1,7 @@
 .assume adl=1
 XDEF _drawGameField
 XDEF _drawBG
+OTHER_COLOR EQU 252
 
 ;an array of structs 10 bytes wide, containing 32+240+32 entries
 ;+0 ypos, +3 sx, +6 w1, +7 w2, +8 w3, +9 w4 
@@ -17,6 +18,7 @@ XREF _track
 
 prev_scanline   EQU 4  ;re-use argument space for temp memory, as the ...
 cur_track_block EQU 5  ;... variable this overwrites isn't being used again
+cur_color 		EQU 7  ;0 or 252
 
 tr_offset EQU 3
 px_offset EQU 6
@@ -50,10 +52,23 @@ dgf_start:
 		ex de,hl
 		;init values for main loop
 		ld b,a
+		inc b
 		neg
-		;add a,240
-		ld c,a
+		srl c
+		ld c,a  ;px offset. some additional testing, yes?
+		sbc a,a
+		and a,OTHER_COLOR ;A is 0 or 252
+		ld L,a
+		ld a,b
+		cp 33
+		ld a,L
+		jr nc,$+4
+		xor a,OTHER_COLOR  ;there has to be a better way to suppress the flashing.
+		ld (dgf_color_ins),a
 		ld (iy+prev_scanline),255
+;		inc b
+;		dec b
+;		jr z,dgf_skipscanline
 ;draw 240 scanlines.
 ; on entry: B=rows of first tile row to draw, C=240
 ;           IX=&translate[t_offset], DE=&track[p_offset]
@@ -112,11 +127,17 @@ dgf_skipscan:
 				jr dgf_finish
 dgf_drawscan:	
 				dec c
-				ld (hl),b
+dgf_color_ins EQU ($-dgf_start+1)+0E30800h
+				ld (hl),0
 				ldir
 				inc de
 				inc hl
 dgf_finish:		
+				ld c,a
+				ld a,(dgf_color_ins)
+				xor 252
+				ld (dgf_color_ins),a
+				ld a,c
 				inc ix
 				dec a
 				jr nz,dgf_drawloop
@@ -127,10 +148,14 @@ dgf_skipscanline:
 		dec c
 		jr z,dgf_endnow
 		lea ix,ix+10
+dgf_godjnznow:
 		djnz dgf_mainloop
-		ld b,64  ;Why does this number have to be twice as large as max px_offset?
+		ld b,65  ;Why does this number have to be twice as large as max px_offset?
 		inc de
-		jr dgf_mainloop
+		ld a,(dgf_color_ins)
+		xor OTHER_COLOR
+		ld (dgf_color_ins),a
+		jr dgf_godjnznow
 dgf_endnow:
 	pop ix
 	ret

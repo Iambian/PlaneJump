@@ -11,6 +11,7 @@
 
 #define GS_TITLE 0
 #define GS_GAMEPLAY 1
+#define GS_FALLING 5
 #define GS_GAMEOVER 2
 #define GS_CREDITS 3
 #define GS_HELP 4
@@ -24,6 +25,7 @@
 #define COLOR_WHITE 255
 #define COLOR_GOLD  254
 #define COLOR_GRAY  253
+#define COLOR_DGRAY 252
 #define COLOR_BLACK 0
 #define COLOR_TRANSPARENT COLOR_WHITE
 
@@ -119,9 +121,11 @@ char *creditstext[] = {
 	"Based on Plain Jump 1.1 by Andreas Ess",
 	"Game written by Iambian",
 	"Coffee and sanity provided by Tim",
-	"Thanks Xeda and Eeems for suggestions",
-	"Thanks to the CodeBros Discord group",
-	"for putting up with my shenanigans",
+	"Thanks Xeda, Eeems, kg583, and fghsgh",
+	"for suggestions and the chats",
+	"Thanks CodeBros and Cemetech Discord",
+	"groups for putting up with my shenanigans",
+	
 };
 void main(void)
 {
@@ -129,7 +133,7 @@ void main(void)
 	uint16_t temp16;
 	uint8_t state,i,j,k;
 	uint8_t stage_state;
-	int8_t tile_px_passed;  //0-32, is vertical offset of current tile.
+	uint8_t tile_px_passed;  //0-32, is vertical offset of current tile.
 	int8_t tile_passed;     //increments. once 16, reset and gen new section
 	int x,tx;
 	uint8_t y,ty;
@@ -138,7 +142,7 @@ void main(void)
 	int ball_x;
 	int ball_min_x;
 	int ball_max_x;
-	uint8_t ball_y;
+	int ball_y;
 	int jumping;     //continue to use this as the y offset. is 16.8 fp
 	uint8_t going;
 	uint8_t lives;
@@ -153,6 +157,7 @@ void main(void)
 	level_pack = levelpack; //INTERNAL LEVEL PACK
 	game_palette[COLOR_GOLD]  = gfx_RGBTo1555(0xFF,0xD7,0x00);
 	game_palette[COLOR_GRAY]  = gfx_RGBTo1555(0x90,0x90,0x80);
+	game_palette[COLOR_DGRAY] = gfx_RGBTo1555(0x40,0x40,0x40);
 	game_palette[COLOR_BLACK] = gfx_RGBTo1555(0x00,0x00,0x00);
 	for (i=1;i<241;++i) {
 		//game_palette[i] = gfx_Darken(gfx_RGBTo1555(0x87,0xCE,0xEB),255-i);
@@ -263,9 +268,10 @@ void main(void)
 					j = tile_passed+4;
 					//if (tile_px_passed+16 > 32) j++;
 					if (!(k&track[j])) {
-						state = GS_GAMEOVER;
+						state = GS_FALLING;
 						continue;
 					}
+					y_velocity = 0;
 					//Located here to prevent infinite air-jumping
 					if (kact&kb_2nd && !jumping) {
 						y_velocity = jumping = INITIAL_VELOCITY;
@@ -278,28 +284,21 @@ void main(void)
 						x_offset = 1;
 					}
 				}
-				//Let's just show a scrolling field for now.
-				//for (i=0;i<32;++i) {
-					//slow down rendering significantly
-					//gfx_FillScreen(COLOR_WHITE);
-					drawGameField(tile_passed,tile_px_passed,x_offset);
-					//gfx_SwapDraw();
-				//}
 				//Move down
 				if (going) {
 					tile_px_passed += 4;
 					ball_counter += 1;
 				}
-				if (tile_px_passed>32) {
+				if (tile_px_passed>=32) {
 					tile_px_passed -= 32;
-					tile_passed -= 1;
 					++score;
-					if (tile_passed<=0) {
+					if (--tile_passed<=0) {
 						score += 7;
 						tile_passed = 16;
 						genSection(GEN_CONTINUE);
 					}
 				}
+				drawGameField(tile_passed,tile_px_passed,x_offset);
 				//we need more frames.
 				i = 127&(jumping>>8);
 				j = i>>3;  //scale ball size between 0-15 -> 32-47 wrt yoffset
@@ -314,7 +313,36 @@ void main(void)
 				if (x_offset == -1) x_offset = 0;
 				break;
 			
+			case GS_FALLING:
+				if (ball_y > (1000)) {
+					tile_px_passed = 0;
+					state = GS_GAMEOVER;
+					keywait();
+					continue;
+				}
+				//Reverse the order of drawing ball and path to make it go under
+				y_velocity -= GRAVITY;
+				ball_y -= (y_velocity>>8);
+				gfx_Wait();
+				drawBG();
+				gfx_TransparentSprite(ballanim[(++ball_counter>>1)&7],ball_x,ball_y);
+				tile_px_passed += 1;
+				if (tile_px_passed>=32) {
+					tile_px_passed -= 32;
+					if (--tile_passed<=0) {
+						tile_passed = 16;
+						genSection(GEN_CONTINUE);
+					}
+				}
+				// gfx_SetTextXY(5,20);
+				// gfx_PrintUInt(tile_passed,3);
+				// gfx_PrintString(" : ");
+				// gfx_PrintUInt(tile_px_passed,3);
+				drawGameField(tile_passed,tile_px_passed,x_offset);
+				break;
+			
 			case GS_GAMEOVER:
+				ball_y = (240-32-8);  //reset after ball falls off edge
 				gfx_SetColor(0x00); //idk what color this is.
 				gfx_SetTextFGColor(COLOR_GOLD);
 				gfx_FillRectangle(0,(240/2-30/2),320,30);
@@ -354,7 +382,7 @@ void main(void)
 			case GS_CREDITS :
 				if (kact) state = GS_TITLE;
 				drawTitleFrame();
-				drawTextBlock(creditstext,6);
+				drawTextBlock(creditstext,7);
 				break;
 				
 			default:
@@ -363,7 +391,7 @@ void main(void)
 		gfx_SwapDraw();
 		
 		//Debouncing, but not in-game.
-		if ((kact|kdir) && (state != GS_GAMEPLAY)) {
+		if ((kact|kdir) && !(state==GS_GAMEPLAY || state==GS_FALLING)) {
 			kact = kdir = 0;
 			keywait();
 		}
