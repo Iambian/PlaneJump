@@ -7,6 +7,19 @@ by Andreas Ess. This is a re-imagining/re-writing of that fun game that
 I played so long ago while bored in math class. To that end, I tried to make
 everything as buttery-smooth as possible. Let me know how that turned out.
 
+How To Play
+-----------
+* Find the `PJUMP.8xp` file in the `bin/` folder.
+* Use your favorite link program to send it to your 84 CE, or an
+	appropriate emulator
+* Run on the homescreen by clearing the homescreen, do the following
+	*	Clear the homescreen
+	*	Paste `Asm(` from the catalog
+	*	Paste the program name from the program menu
+	*	See that the line reads `Asm(prgmPJUMP` and press ENTER
+* Or you can run the program from your favorite shell, such as Cesium.
+	It's probably better to do it that way.
+
 Controls
 --------
 
@@ -43,6 +56,24 @@ Acknowledgements
 	warm and fuzzy feelings for some reason
 * Google - for image searching and that cool explosion sprite that I cribbed off
 	of it and re-used for nearly all my game projects (where it would make sense. -ish.)
+
+Building the Game From Source
+-----------------------------
+
+Make sure you have the latest version (or thereabouts) installed,
+which can be found 
+[here](https://github.com/CE-Programming/toolchain/releases) .
+You may need to download the next-to-latest version and install that too if
+the build process fails due to missing things.
+
+Open a command-line console in the project's root directory and run the
+following commands:
+
+* `make gfx`
+* `make`
+
+If there were no errors, `PJUMP.8xp` will now be found in the `bin/` folder.
+
 
 
 
