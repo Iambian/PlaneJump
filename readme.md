@@ -1,4 +1,4 @@
-Plain Jump
+Plane Jump
 ==========
 
 An implementation of the the game 
