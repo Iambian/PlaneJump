@@ -1,6 +1,7 @@
 .assume adl=1
 XDEF _drawGameField
 XDEF _drawBG
+XDEF _hue_to_1555RGB
 OTHER_COLOR EQU 252
 
 ;an array of structs 10 bytes wide, containing 32+240+32 entries
@@ -86,10 +87,10 @@ dgf_mainloop:
 		jr z,dgf_skipscanline   ;if repeating same line, skip. for performance
 		inc a    ;If L==(A+1), is on track
 		jr z,dgf_skip_repro
-		add a,3
+		add a,7
 		cp l    ;but if A is still greater than L, interpolate. Else, cancel.
 		jr c,dgf_skip_repro
-		sub a,3
+		sub a,7
 		ld l,a
 		lea ix,ix-10
 		inc b
@@ -173,6 +174,7 @@ dgf_end:
 ;Try to accelerate this later. Just accept the 30fps for now.
 _drawBG:
 	di
+	call hue_to_1555_internal
 	ld de,0E30800h
 	ld hl,drawbg_seg1_start
 	ld bc,drawbg_seg1_end-drawbg_seg1_start
@@ -194,27 +196,174 @@ drawbg_routine_start:
 	ld de,320*240
 	add hl,de
 	ld sp,hl
-	ld a,240
+	ld b,240
 	jp 0E30800h
 	
 ;segment 1: loads DE with value to be pushing. Use IY-6 as scratch
 drawbg_seg1_start:
-	ld (iy-6+2),a ;3
+	ld (iy-6+2),b ;3
 	ld de,(iy-6)  ;3: get A into DEU
-	ld e,a        ;1
-	ld d,a        ;1
+	ld e,b        ;1
+	ld d,b        ;1 = 8
 drawbg_seg1_end:
 ;Immediately after seg1 is 106 instances of PUSH DE
 drawbg_seg2_start:
 	inc sp        ;1
-	push de       ;1
-	dec a         ;1
-	db 020h,-(11+106+2)  ;jr nz,[explicit offset] (+2 for itself)
+	push de       ;1 = 2
+	db 10h,-(8+2+106+2)
 	ld sp,iy
 	ei
 	ret
 drawbg_seg2_end:
+
+
+
+;Computing most of this in 8.8 fixed point, represented as an int.
+;Note: 1524 comes from 65536/43, where 43 is roughly (256/6), or 1/6th of
+;a complete rotation around our "special" color wheel.
+;  0- 43: N*1524
+; 44-127: 65535
+;128-171: -(N-171)*1524
+;172-255: 0
+;
+;1555: IRRR_RRGG:GGGB_BBBB
+hue_to_1555_internal:
+	ld hl,hto1555_reloc_start
+	ld de,0E30800h
+	ld bc,hto1555_reloc_end-hto1555_reloc_start
+	ldir
+hto1555_smc EQU $+1
+	ld a,0
+	inc a
+	ld (hto1555_smc),a
+	ld c,a
+	jr hto1555_internal_skip
+_hue_to_1555RGB:
+	di
+	ld hl,hto1555_reloc_start
+	ld de,0E30800h
+	ld bc,hto1555_reloc_end-hto1555_reloc_start
+	ldir
+	;start calculating
+	pop bc   ;C = hue (0-255)
+	push bc
+	ld a,c
+hto1555_internal_skip:
+	call hto1555_single  ;get G. bits in GGGG_G***. Moveto: GGG*_**GG
+	and a,248    ;GGGG_G***
+	rlca         ;GGGG_***G
+	rlca         ;GGG*_**GG
+	ld h,a       ;save raw to high (reprocess later to replace upper bits
+	and a,224    ;GGG0_0000
+	ld l,a       ;save processed to low
+	ld a,c
+	sub a,171    ;blue offset
+	call hto1555_single ;get B. bits in BBBB_B***. Moveto: ***B_BBBB
+	and a,248    ;BBBB_B***
+	rrca         ;*BBB_BB**
+	rrca         ;**BB_BBB*
+	rrca         ;***B_BBBB
+	or L
+	ld L,a       ;GGGB_BBBB (low byte)
+	ld a,c
+	sub a,85     ;red offset
+	call hto1555_single ;get R. bits in RRRR_R***. Moveto: 1RRR_RR**
+	and a,248    ;RRRR_R000
+	inc a        ;RRRR_R001
+	rrca         ;1RRR_RR00
+	xor h        ;1R^G
+	and 252      ;####_##00
+	xor h        ;1RRR_RRGG
+	ld h,a       ;HL is now set up for stuffs.
+	;get ready to write to the buffer thing.
+	ld a,MB      ;save MBASE
+	push af
+		ld a,0E3h
+		ld MB,a
+		jp.sis 0800h
+hto1555_continue:
+	pop af
+	ld MB,a
+	ret
+
+;in: A=hue, out A= (H_GREEN).
+;(To get red, pass in A = A-85. To get blue, pass in A = A-171
+;destroys HL
+hto1555_single:
+	cp 44
+	jr nc,hto1555s_skipasc
+hto1555_slide:
+	ld e,5   ;high byte const of 1524
+	ld d,a
+	mlt de   ;calc high byte first
+	ld d,a   ;start loading next mult but save result of prev mult
+	ld a,e   ;(0.8*8) in A for later combine
+	ld e,244 ;low byte const of 1524
+	mlt de
+	add a,d  ;high combined, return result in A
+	ret
+hto1555s_skipasc:
+	bit 7,a
+	jr nz,hto1555s_skipmax
+	ld a,255
+	ret
+hto1555s_skipmax:
+	sub a,172
+	jr nc,hto1555s_skiptomin
+	cpl     ; -(N-171) but we can -(N-172)+1. I think?
+	jr hto1555_slide
+hto1555s_skiptomin:
+	xor a
+	ret
 	
 	
-	
-	
+;Note: 0E30200h is the start of the 512 byte color palette. (RGB 1555)
+;NOte: 0E30800h is the start of CursorImage (1KB of high speed memory)
+
+hto1555_reloc_start:
+.assume adl=0
+;Assumed to be at address $E30800.
+	ld b,30
+	ld sp,0200h+01E2h  ;just after the 241st element
+	ld de,32     ;to increment green
+hto1555_reloc_loop:
+	ld a,h    ;get red
+	and 124   ;isolate red
+	cp 124
+	jr z,hto1555_noinc_red
+	add a,4
+hto1555_noinc_red:
+	xor h
+	and 252
+	xor h
+	ld h,a
+	ld a,L    ;get blue value, disregard green
+	and 31    ;isolate blue
+	cp 31
+	jr z,hto1555_noinc_blue
+	inc a
+hto1555_noinc_blue:
+	xor L     ;begin combine low byte with (possibly) new blue
+	and 31    ;clear green bits so next xor will write them, leaving blue
+	xor L
+	ld L,a
+	xor h     ;begin combine low with high to isolate all green bits
+	and 224   ;keep high bits of L
+	xor h     ;to write out all green bits on lower (from high)
+	and 227   ;to remove all non-green bits
+	cp 227
+	jr z,hto1555_noinc_green
+	add hl,de
+hto1555_noinc_green:
+	push hl
+	push hl
+	push hl
+	push hl
+	push hl
+	push hl
+	push hl
+	push hl
+	djnz hto1555_reloc_loop
+	jp.lil hto1555_continue
+.assume adl=1
+hto1555_reloc_end:

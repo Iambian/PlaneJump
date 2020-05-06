@@ -90,6 +90,8 @@ typedef struct anotherthing {
 	unsigned int number_of_times_ran;
 	unsigned int number_of_times_quitted;
 	unsigned int number_of_times_died;
+	uint8_t something;
+	uint8_t reserved[20];
 } gamedata_t;
 
 vector_t empty_point = {0.0f,0.0f,0.0f};
@@ -274,13 +276,6 @@ void main(void)
 				break;
 			
 			case GS_GAMEPLAY:
-				gfx_Wait();
-				drawBG();
-				gfx_SetTextFGColor(COLOR_BLACK);
-				gfx_SetTextScale(1,1);
-				gfx_SetTextXY(5,5);
-				if (score<=999999)	gfx_PrintUInt(score,6);
-				else				gfx_PrintString("u broek score >:(");
 				if (kact&kb_Mode) { 
 					lives = 1;
 					state = GS_QUITTING;
@@ -334,6 +329,13 @@ void main(void)
 						genSection(GEN_CONTINUE);
 					}
 				}
+				gfx_SetTextFGColor(COLOR_BLACK);
+				gfx_SetTextScale(1,1);
+				gfx_SetTextXY(5,5);
+				gfx_Wait();
+				drawBG();
+				if (score<=999999)	gfx_PrintUInt(score,6);
+				else				gfx_PrintString("u broek score >:(");
 				drawGameField(tile_passed,tile_px_passed,x_offset);
 				//we need more frames.
 				i = 127&(jumping>>8);
@@ -342,7 +344,8 @@ void main(void)
 				j = j>>1;  //retain ball centering by adjusting based on new w
 				((uint8_t*)curball)[0] = k;
 				((uint8_t*)curball)[1] = k;
-				gfx_ScaleSprite(ballanim[(ball_counter>>1)&7],curball);
+				if (k==32) memcpy(curball,ballanim[(ball_counter>>1)&7],(32*32));
+				else gfx_ScaleSprite(ballanim[(ball_counter>>1)&7],curball);
 				//gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
 				gfx_TransparentSprite_NoClip(curball,ball_x-j,ball_y-(unsigned int)i-j);
 				if (x_offset == 1) x_offset = -1;
@@ -553,12 +556,17 @@ void genSection_Solid(void) {
 	return;
 }
 void genSection_Random(void) {
-	uint8_t i,d;
+	uint8_t i,d,z;
 	uint32_t dt;
-	for (i=0;i<16;i+=2) {
-		dt = random();
-		track[i+1] = track[i] = (dt&255)^((dt>>8)&255)^((dt>>16)&255);
-	}
+	do {
+		z = 0;
+		for (z=i=0;i<16;i+=2) {
+			dt = random();
+			d  = 15&((dt&255)^((dt>>8)&255)^((dt>>16)&255));
+			if (!d) ++z;
+			track[i+1] = track[i] = d;
+		}
+	} while (z>2);  //ensures the look keeps going if too many empty spaces
 }
 void genSection_BinaryFill(void) {
 	uint8_t i,d;
@@ -616,8 +624,8 @@ void genSection(uint8_t init) {
 
 #define CAM_DIST 3.0f
 #define PLANE_DIST 2.0f
-#define IN_ANGLE  ((0.0f+30.0f) * (3.14159265359f / 180.0f))
-#define IN_ANGLE2 ((0.0f+30.0f+90.0f) * (3.14159265359f / 180.0f))
+#define IN_ANGLE  ((0.0f+40.0f) * (3.14159265359f / 180.0f))
+#define IN_ANGLE2 ((0.0f+40.0f+90.0f) * (3.14159265359f / 180.0f))
 #define SIN_FN(x) ((float)(x-(x*x*x)/(3.0f*2)+(x*x*x*x*x)/(5*4*3*2)-(x*x*x*x*x*x*x)/(7*6*5*4*3*2)))
 #define SIN_PR SIN_FN(IN_ANGLE)
 #define COS_PR SIN_FN(IN_ANGLE2)
@@ -635,9 +643,9 @@ void init_xlate(int angle) {
 	for (y = -(3.5f+1.0f), yi = -32; yi < (240+32) ; y += (1.0f/32.0f), ++yi) {
 		//condensed projection
 		z1 = PLANE_DIST/-(y*SIN_PR-CAM_DIST);
-		x1 = ((z1*-2.0f   )+5.0f)*32;
-		y1 = ((z1*y*COS_PR)+2.5f)*33;
-		x2 = ((z1*-1.0f   )+5.0f)*32;
+		x1 = ((z1*-2.0f   )+5.9f)*28;
+		y1 = ((z1*y*COS_PR)+1.5f)*28;
+		x2 = ((z1*-1.0f   )+5.9f)*28;
 		
 		if ( ((unsigned int)yi)<240 && ((unsigned int)y1)<240) {
 			translate[yi+32].ypos   = (uint8_t) y1;

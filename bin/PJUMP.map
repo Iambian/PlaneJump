@@ -6,11 +6,11 @@ libs     D1A9EC D1AA7B            8Fh
 startup  D1AA7B D1AABA            3Fh
 cleanup  D1AABA D1AACE            14h
 exit     D1AACE D1AAD4             6h
-code     D1AAD4 D1C09B          15C7h
-data     D1C09B D1D964          18C9h
-strsect  D1D964 D1DBE0           27Ch
-text     D1DBE0 D1DBE0             0h
-bss      D031F6 D0BDF1 D13FD6   8BFBh
+code     D1AAD4 D1C1B5          16E1h
+data     D1C1B5 D1DA7E          18C9h
+strsect  D1DA7E D1DCFA           27Ch
+text     D1DCFA D1DCFA             0h
+bss      D031F6 D0BE06 D13FD6   8C10h
 header   D1A87F D1A882             3h
 
 Label                             Value
@@ -142,7 +142,7 @@ _os_EnableHomeTextBuffer        = D1AAE6
 _srandom                        = D1AAF8
 __setstate                      = D1AAFF
 _random                         = D1AB0F
-__state                         = D1C09B
+__state                         = D1C1B5
 _zx7_Decompress                 = D1AB66
 __frameset0                     = D1ABD2
 __seqcase                       = 000210
@@ -181,78 +181,79 @@ _exit                           = D1AAD0
 __exit                          = D1AAA9
 __exitsp                        = D1AAA9
 __errsp                         = D1AAA9
-_ball0_compressed               = D1C0CD
-_ball1_compressed               = D1C12B
-_ball2_compressed               = D1C196
-_ball3_compressed               = D1C201
-_ball4_compressed               = D1C258
-_ball5_compressed               = D1C2C0
-_ball6_compressed               = D1C32C
-_ball7_compressed               = D1C392
-_explode_gfx_pal                = D1C3E6
-_explosion_ts_tiles_compressed  = D1CAF2
-_explosion_ts_tile_5_compressed = D1CA91
-_explosion_ts_tile_4_compressed = D1C9A3
-_explosion_ts_tile_3_compressed = D1C804
-_explosion_ts_tile_2_compressed = D1C66E
-_explosion_ts_tile_1_compressed = D1C519
-_explosion_ts_tile_0_compressed = D1C3F0
-_title_compressed               = D1CB04
-_title_gfx_pal                  = D1D6C2
-_levelpack                      = D1D8F2
-_level1                         = D1D8C2
-_blankScreen                    = D1BF4C
-_changePalette                  = D1BF2A
-_init_xlate                     = D1BCDC
-_genSection                     = D1BC59
-_genSection_AdvanceLevel        = D1BC42
-_genSection_LoadLevel           = D1BB87
-_genSection_BinaryFill          = D1BB20
-_genSection_Random              = D1BAA3
-_genSection_Solid               = D1BA8C
-_drawTextBlock                  = D1B9E1
-_drawMenu                       = D1B8B2
-_printTextCenter                = D1B877
-_drawTitleFrame                 = D1B82C
-_keyconfirm                     = D1B81C
-_keywait                        = D1B814
+_ball0_compressed               = D1C1E7
+_ball1_compressed               = D1C245
+_ball2_compressed               = D1C2B0
+_ball3_compressed               = D1C31B
+_ball4_compressed               = D1C372
+_ball5_compressed               = D1C3DA
+_ball6_compressed               = D1C446
+_ball7_compressed               = D1C4AC
+_explode_gfx_pal                = D1C500
+_explosion_ts_tiles_compressed  = D1CC0C
+_explosion_ts_tile_5_compressed = D1CBAB
+_explosion_ts_tile_4_compressed = D1CABD
+_explosion_ts_tile_3_compressed = D1C91E
+_explosion_ts_tile_2_compressed = D1C788
+_explosion_ts_tile_1_compressed = D1C633
+_explosion_ts_tile_0_compressed = D1C50A
+_title_compressed               = D1CC1E
+_title_gfx_pal                  = D1D7DC
+_levelpack                      = D1DA0C
+_level1                         = D1D9DC
+_blankScreen                    = D1BFA2
+_changePalette                  = D1BF80
+_init_xlate                     = D1BD2F
+_genSection                     = D1BCAC
+_genSection_AdvanceLevel        = D1BC95
+_genSection_LoadLevel           = D1BBDA
+_genSection_BinaryFill          = D1BB73
+_genSection_Random              = D1BAE2
+_genSection_Solid               = D1BACB
+_drawTextBlock                  = D1BA20
+_drawMenu                       = D1B8F1
+_printTextCenter                = D1B8B6
+_drawTitleFrame                 = D1B86B
+_keyconfirm                     = D1B85B
+_keywait                        = D1B853
 _main                           = D1AC0F
-_creditstext                    = D1D947
-_helptext                       = D1D938
-_titleopts                      = D1D92C
-_title_palette                  = D1D929
-_game_palette                   = D0BBF1
-_level_pack                     = D0BBEE
-_titlebanner                    = D1D926
-_titlebanner_data               = D07731
-_ballanim                       = D07719
-_explosion                      = D1D923
-_explosion_data                 = D06717
-_curball                        = D1D920
-_curball_data                   = D05E15
-_ball7                          = D1D91D
-_ball7_data                     = D05A13
-_ball6                          = D1D91A
-_ball6_data                     = D05611
-_ball5                          = D1D917
-_ball5_data                     = D0520F
-_ball4                          = D1D914
-_ball4_data                     = D04E0D
-_ball3                          = D1D911
-_ball3_data                     = D04A0B
-_ball2                          = D1D90E
-_ball2_data                     = D04609
-_ball1                          = D1D90B
-_ball1_data                     = D04207
-_ball0                          = D1D908
-_ball0_data                     = D03E05
-_translate_last_usable          = D03E02
-_translate                      = D03222
-_track                          = D03202
+_creditstext                    = D1DA61
+_helptext                       = D1DA52
+_titleopts                      = D1DA46
+_title_palette                  = D1DA43
+_game_palette                   = D0BC06
+_level_pack                     = D0BC03
+_titlebanner                    = D1DA40
+_titlebanner_data               = D07746
+_ballanim                       = D0772E
+_explosion                      = D1DA3D
+_explosion_data                 = D0672C
+_curball                        = D1DA3A
+_curball_data                   = D05E2A
+_ball7                          = D1DA37
+_ball7_data                     = D05A28
+_ball6                          = D1DA34
+_ball6_data                     = D05626
+_ball5                          = D1DA31
+_ball5_data                     = D05224
+_ball4                          = D1DA2E
+_ball4_data                     = D04E22
+_ball3                          = D1DA2B
+_ball3_data                     = D04A20
+_ball2                          = D1DA28
+_ball2_data                     = D0461E
+_ball1                          = D1DA25
+_ball1_data                     = D0421C
+_ball0                          = D1DA22
+_ball0_data                     = D03E1A
+_translate_last_usable          = D03E17
+_translate                      = D03237
+_track                          = D03217
 _gamedata                       = D031F6
-_empty_point                    = D1D8FC
-_drawGameField                  = D1BF7B
-_drawBG                         = D1C051
+_empty_point                    = D1DA16
+_drawGameField                  = D1BFD1
+_drawBG                         = D1C0A7
+_hue_to_1555RGB                 = D1C10C
 _ti_CloseAll                    = D1AA00
 _ti_Open                        = D1AA04
 _ti_Write                       = D1AA08
