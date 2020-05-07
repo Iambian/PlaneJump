@@ -6,10 +6,10 @@ libs     D1A9EC D1AA7B            8Fh
 startup  D1AA7B D1AABA            3Fh
 cleanup  D1AABA D1AACE            14h
 exit     D1AACE D1AAD4             6h
-code     D1AAD4 D1C129          1655h
-data     D1C129 D1D806          16DDh
-strsect  D1D806 D1DA82           27Ch
-text     D1DA82 D1DA82             0h
+code     D1AAD4 D1C10D          1639h
+data     D1C10D D1D7EA          16DDh
+strsect  D1D7EA D1DA5A           270h
+text     D1DA5A D1DA5A             0h
 bss      D031F6 D09D9C D13FD6   6BA6h
 header   D1A87F D1A882             3h
 
@@ -142,7 +142,7 @@ _os_EnableHomeTextBuffer        = D1AAE6
 _srandom                        = D1AAF8
 __setstate                      = D1AAFF
 _random                         = D1AB0F
-__state                         = D1C129
+__state                         = D1C10D
 _zx7_Decompress                 = D1AB66
 __frameset0                     = D1ABD2
 __seqcase                       = 000210
@@ -181,63 +181,63 @@ _exit                           = D1AAD0
 __exit                          = D1AAA9
 __exitsp                        = D1AAA9
 __errsp                         = D1AAA9
-_ball_ts_tiles_compressed       = D1C477
-_ball_ts_tile_7_compressed      = D1C419
-_ball_ts_tile_6_compressed      = D1C3AE
-_ball_ts_tile_5_compressed      = D1C343
-_ball_ts_tile_4_compressed      = D1C2EC
-_ball_ts_tile_3_compressed      = D1C284
-_ball_ts_tile_2_compressed      = D1C218
-_ball_ts_tile_1_compressed      = D1C1B2
-_ball_ts_tile_0_compressed      = D1C15E
-_explode_gfx_pal                = D1C48F
-_explosion_ts_tiles_compressed  = D1CB9B
-_explosion_ts_tile_5_compressed = D1CB3A
-_explosion_ts_tile_4_compressed = D1CA4C
-_explosion_ts_tile_3_compressed = D1C8AD
-_explosion_ts_tile_2_compressed = D1C717
-_explosion_ts_tile_1_compressed = D1C5C2
-_explosion_ts_tile_0_compressed = D1C499
-_title_compressed               = D1CBAD
-_title_gfx_pal                  = D1D76B
-_levelpack                      = D1D7A9
-_level1                         = D1D779
-_changePalette                  = D1BF18
-_genSection                     = D1BE75
-_genSection_LoadLevel           = D1BDBA
-_genSection_BinaryFill          = D1BD53
-_genSection_Random              = D1BC87
-_drawTextBlock                  = D1BBDC
-_showStats                      = D1BBA8
-_printTextCenter                = D1BB6D
-_drawTitleFrame                 = D1BB18
-_keyconfirm                     = D1BB08
-_keywait                        = D1BB00
+_ball_ts_tiles_compressed       = D1C45B
+_ball_ts_tile_7_compressed      = D1C3FD
+_ball_ts_tile_6_compressed      = D1C392
+_ball_ts_tile_5_compressed      = D1C327
+_ball_ts_tile_4_compressed      = D1C2D0
+_ball_ts_tile_3_compressed      = D1C268
+_ball_ts_tile_2_compressed      = D1C1FC
+_ball_ts_tile_1_compressed      = D1C196
+_ball_ts_tile_0_compressed      = D1C142
+_explode_gfx_pal                = D1C473
+_explosion_ts_tiles_compressed  = D1CB7F
+_explosion_ts_tile_5_compressed = D1CB1E
+_explosion_ts_tile_4_compressed = D1CA30
+_explosion_ts_tile_3_compressed = D1C891
+_explosion_ts_tile_2_compressed = D1C6FB
+_explosion_ts_tile_1_compressed = D1C5A6
+_explosion_ts_tile_0_compressed = D1C47D
+_title_compressed               = D1CB91
+_title_gfx_pal                  = D1D74F
+_levelpack                      = D1D78D
+_level1                         = D1D75D
+_changePalette                  = D1BEFC
+_genSection                     = D1BE59
+_genSection_LoadLevel           = D1BD9E
+_genSection_BinaryFill          = D1BD37
+_genSection_Random              = D1BC6B
+_drawTextBlock                  = D1BBC0
+_showStats                      = D1BB8C
+_printTextCenter                = D1BB51
+_drawTitleFrame                 = D1BAFC
+_keyconfirm                     = D1BAEC
+_keywait                        = D1BAE4
 _main                           = D1AD08
-_creditstext                    = D1D7EF
-_helptext                       = D1D7E0
-_titleopts                      = D1D7D4
-_next_x_offset                  = D1D7D1
-_object99                       = D1D7CE
-_shadow_offsets                 = D1D7C8
+_creditstext                    = D1D7D3
+_helptext                       = D1D7C4
+_titleopts                      = D1D7B8
+_next_x_offset                  = D1D7B5
+_object99                       = D1D7B2
+_shadow_offsets                 = D1D7AC
 _title_palette                  = D09B9C
 _game_palette                   = D0999C
 _level_pack                     = D09999
-_titlebanner                    = D1D7C5
+_titlebanner                    = D1D7A9
 _titlebanner_data               = D054DC
 _ballanim                       = D054C4
-_explosion                      = D1D7C2
+_explosion                      = D1D7A6
 _explosion_data                 = D044C2
-_curball                        = D1D7BF
+_curball                        = D1D7A3
 _curball_data                   = D03BC0
 _translate_last_usable          = D03BBD
 _translate                      = D0323D
 _track                          = D0321D
 _gamedata                       = D031FC
-_empty_point                    = D1D7B3
-_drawGameField                  = D1BF52
-_drawBG                         = D1C02B
-_hue_to_1555RGB                 = D1C0BF
+_empty_point                    = D1D797
+_drawGameField                  = D1BF36
+_drawBG                         = D1C00F
+_hue_to_1555RGB                 = D1C0A3
 _ti_CloseAll                    = D1AA00
 _ti_Open                        = D1AA04
 _ti_Write                       = D1AA08

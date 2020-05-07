@@ -8,7 +8,7 @@
 NAME        ?= PJUMP
 COMPRESSED  ?= NO
 ICON        ?= icon.png
-DESCRIPTION ?= "Plain Jump"
+DESCRIPTION ?= "Plane Jump"
 
 # ----------------------------
 # Other Options (Advanced)

@@ -145,8 +145,8 @@ char *creditstext[] = {
 	"Coffee and sanity provided by Tim",
 	"Thanks Xeda, Eeems, kg583, and fghsgh",
 	"for suggestions and the chats",
-	"Thanks CodeBros and Cemetech Discord",
-	"groups for putting up with my shenanigans",
+	"Thanks Cemetech, CodeBros, and Omnimaga",
+	"for putting up with my shenanigans",
 	
 };
 
@@ -182,7 +182,7 @@ void main(void)
 	int x_offset;    //for subtle shake effect on landing
 	int idx;         //liek i, except longer.
 	int yi,wi,werr;
-	int z_speed;
+	//int z_speed;
 	float xf,yf,x1,y1,z1,x2;
 	
 	
@@ -213,7 +213,7 @@ void main(void)
 		zx7_Decompress(ballanim[i] = malloc(((32*32)+2)),ball_ts_tiles_compressed[i]);
 	
 	
-	//Generates the translate array inline
+	//Generates the translate array inline with this function
 	for (yf = -(3.5f+1.0f), yi = -32; yi < (240+32) ; yf += (1.0f/32.0f), ++yi) {
 		//condensed projection
 		z1 = PLANE_DIST/-(yf*SIN_PR-CAM_DIST);
@@ -317,8 +317,7 @@ void main(void)
 					gfx_SetTextFGColor(COLOR_BLACK);
 					gfx_SetTextScale(1,1);
 					gfx_PrintStringXY("High score: ",5,230);
-					if (gamedata.hiscore<=999999)	gfx_PrintUInt(gamedata.hiscore,6);
-					else							gfx_PrintString(">999999");
+					gfx_PrintUInt(gamedata.hiscore,7);
 				}
 				break;
 			
