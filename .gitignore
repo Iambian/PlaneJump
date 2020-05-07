@@ -1,3 +1,4 @@
 /src/gfx/out/*
 !src/gfx/out/PLACEHOLDER.txt
 /obj
+/src/gfx/_backup

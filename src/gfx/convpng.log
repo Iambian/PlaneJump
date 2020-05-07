@@ -8,7 +8,7 @@ wrote palette image (out/pmain.png)
 
 --- palette ptitle.png ---
 building palette with [256] available indices ...
-built palette with [11] indices.
+built palette with [7] indices.
 palette quality : 100.00%
 wrote palette image (out/ptitle.png)
 
@@ -20,15 +20,16 @@ wrote palette image (out/pexplode.png)
 
 --- sprites_gfx (C) ---
 using defined palette out/pmain.png ...
-8:
- ball0 : converted! (1026 > 94 bytes)
- ball1 : converted! (1026 > 107 bytes)
- ball2 : converted! (1026 > 107 bytes)
- ball3 : converted! (1026 > 87 bytes)
- ball4 : converted! (1026 > 104 bytes)
- ball5 : converted! (1026 > 108 bytes)
- ball6 : converted! (1026 > 102 bytes)
- ball7 : converted! (1026 > 84 bytes)
+1:
+ ball_ts : converted!
+ ball_ts_tile_0_compressed (1026 > 84 bytes)
+ ball_ts_tile_1_compressed (1026 > 102 bytes)
+ ball_ts_tile_2_compressed (1026 > 108 bytes)
+ ball_ts_tile_3_compressed (1026 > 104 bytes)
+ ball_ts_tile_4_compressed (1026 > 87 bytes)
+ ball_ts_tile_5_compressed (1026 > 107 bytes)
+ ball_ts_tile_6_compressed (1026 > 107 bytes)
+ ball_ts_tile_7_compressed (1026 > 94 bytes)
 
 --- title_gfx (C) ---
 using defined palette out/ptitle.png ...
