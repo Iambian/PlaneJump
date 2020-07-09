@@ -22,6 +22,8 @@ recreate that experience.
 
 Did that work out? Let me know!
 
+![Animated screenshot of use and gameplay](/_sshot.png?raw=true)
+
 How To Play
 -----------
 1. Find the `PJUMP.8xp` file in the `bin/` folder.
