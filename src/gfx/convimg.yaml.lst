@@ -2,8 +2,8 @@ out/game_set.h
 out/game_set.c
 out/ball_ts.h
 out/ball_ts.c
-out/explosion_ts.h
-out/explosion_ts.c
+out/explosion_ts_2.h
+out/explosion_ts_2.c
 out/title.h
 out/title.c
 out/gfx.h

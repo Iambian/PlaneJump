@@ -31,7 +31,7 @@
 
 //COLOR_OFFSET defined in gfx/convimg.yaml
 //TODO: Move below includes and use any of the offsets in gfx.h
-#define COLOR_OFFSET(x) (242+x)
+#define COLOR_OFFSET(x) (241+x)
 #define COLOR_TRANSPARENT COLOR_OFFSET(0)
 #define COLOR_GOLD        COLOR_OFFSET(1)
 #define COLOR_GRAY        COLOR_OFFSET(2)
@@ -68,7 +68,7 @@
 #include "levels.h"
 #include "gfx/out/gfx.h"
 #include "gfx/out/ball_ts.h"
-#include "gfx/out/explosion_ts.h"
+#include "gfx/out/explosion_ts_2.h"
 #include "gfx/out/title.h"
 
 
@@ -123,7 +123,7 @@ gfx_UninitedSprite(ball_6, 32, 32);
 gfx_UninitedSprite(ball_7, 32, 32);
 gfx_UninitedSprite(ball_8, 32, 32);
 gfx_sprite_t *ballanim[8];
-gfx_UninitedSprite(explosion, 48, 48);
+gfx_UninitedSprite(explosion, 24, 24);
 gfx_UninitedSprite(resized_ball, 64, 64);
 
 
@@ -188,7 +188,6 @@ int main(void) {
 	int jumping;     //continue to use this as the y offset. is 16.8 fp
 	int y_velocity;  //16.8fp
 	int x_offset;    //for subtle shake effect on landing
-	int idx;         //liek i, except longer.
 	
 	/* 
 		Initialize draw system
@@ -437,15 +436,15 @@ int main(void) {
 				break;
 				
 			case GS_QUITTING:
-				if (ball_counter>=30) {
+				if (ball_counter>=40) {
 					state = GS_GAMEOVER;
 					continue;
 				}
 				gfx_Wait();
 				drawBG();
 				drawGameField(tile_passed,tile_px_passed,x_offset);
-				if (ball_counter<12) {
-					zx0_Decompress(explosion, explosion_ts_tiles_compressed[ball_counter>>1]);
+				if (ball_counter<20) {
+					zx0_Decompress(explosion, explosion_ts_2_tiles_compressed[ball_counter>>1]);
 					resized_ball->width = 64;
 					resized_ball->height = 64;
 					//Reusing the resized ball as a temporary buffer.

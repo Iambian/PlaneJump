@@ -14,7 +14,7 @@ extern _translate
 ;iy+3=arg0, iy+6=arg1, iy+9=arg2 ...
 extern _track
 
-OTHER_COLOR EQU 244
+OTHER_COLOR EQU 243
 DRAW_BUFFER EQU 0E30014h
 LCD_PALETTE_MEMORY EQU 0E30200h		;RGB1555 palette, 512 bytes
 CURSOR_IMAGE_MEMORY EQU 0E30800h	;1KB high speed memory
