@@ -81,15 +81,11 @@ Acknowledgements
 
 Building the Game From Source
 -----------------------------
-
-Make sure you have the latest version (or thereabouts) installed,
-which can be found 
-[here](https://github.com/CE-Programming/toolchain/releases) .
-You may need to download the next-to-latest version and install that too if
-the build process fails due to missing things.
-
-Open a command-line console in the project's root directory and run the
-following commands:
+I built this project using the CE C Toolchain v12.1 release. You can find all
+releases [here](https://github.com/CE-Programming/toolchain/releases) if you
+don't have it installed, but if what you have doesn't work, you now know which
+version should work. Once you have it installed, open a command-line prompt
+in the project's root directory and run the following commands:
 
 * `make gfx`
 * `make`
@@ -110,7 +106,11 @@ Known Problems
 	a random level generator after the first few static segments.
 * Reports of minor screen tearing and slight slowdowns - not sure how to fix.
 
-
+Version History
+---------------
+* **0.1** - Initial release.
+* **0.2** - Cleaned up code and updated it to build on 
+	toolchain v12.1 as opposed to probably-v8.0
 
 
 

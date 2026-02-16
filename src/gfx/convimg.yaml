@@ -1,0 +1,61 @@
+palettes:
+  - name: game_set
+    max-entries: 13
+    fixed-entries:
+      - color: {index: 0, hex: "#FF00DC"}   #Pink. For transparency.
+      - color: {index: 1, hex: "#FFD700"}   #Gold. Menu text selected
+      - color: {index: 2, hex: "#909080"}   #Gray. Menu text unselected
+      - color: {index: 3, hex: "#000000"}   #Black. For text outlines and such.
+      - color: {index: 4, hex: "#7EC5F1"}   #Light blue. For background.
+    quality: 10
+    images:
+      - ball_ts.png
+      - explosion_ts.png
+      - title.png
+
+converts:
+  - name: ball
+    palette: game_set
+    palette-offset: 242
+    compress: zx0
+    style: palette
+    transparent-index: 242
+    tilesets:
+        tile-width: 32
+        tile-height: 32
+        images:
+          - ball_ts.png
+  - name: explosion
+    palette: game_set
+    palette-offset: 242
+    compress: zx0
+    style: palette
+    transparent-index: 242
+    tilesets:
+        tile-width: 48
+        tile-height: 48
+        images:
+          - explosion_ts.png
+  - name: title
+    palette: game_set
+    palette-offset: 242
+    compress: zx0
+    style: palette
+    images:
+      - title.png
+
+outputs:
+  - type: c
+    palettes:
+      - game_set
+    converts:
+      - ball
+      - explosion
+      - title
+    directory: out/
+    prepend-palette-sizes: true
+    const: true
+
+
+
+

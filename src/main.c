@@ -2,8 +2,8 @@
  *--------------------------------------
  * Program Name: Plane Jump
  * Author: idk anymore
- * License: rawrf.
- * Description: rawrf.
+ * License: MIT
+ * Description: Roll a ball and jump over gaps.
  *--------------------------------------
 */
 
@@ -15,7 +15,7 @@
    crappier to get them to compress better shouldn't be the go-to solution.
 */
 
-#define VERSION "v0.1"
+#define VERSION "v0.2"
 
 #define GS_TITLE 0
 #define GS_GAMEPLAY 1
@@ -29,18 +29,15 @@
 #define GEN_INIT 1
 #define GEN_CONTINUE 0
 
-//These color things. Most of them are guesses.
-//My eyes are not clever things.
-#define COLOR_WHITE 255
-#define COLOR_GOLD  254
-#define COLOR_GRAY  253
-#define COLOR_DGRAY 252
-#define COLOR_BLACK 0
-//Reserved range of colors
-#define COLOR_EXPLODESTART 245
-#define COLOR_EXPLODEEND   250
+//COLOR_OFFSET defined in gfx/convimg.yaml
+//TODO: Move below includes and use any of the offsets in gfx.h
+#define COLOR_OFFSET(x) (242+x)
+#define COLOR_TRANSPARENT COLOR_OFFSET(0)
+#define COLOR_GOLD        COLOR_OFFSET(1)
+#define COLOR_GRAY        COLOR_OFFSET(2)
+#define COLOR_BLACK       COLOR_OFFSET(3)
+#define COLOR_BACKGROUND  COLOR_OFFSET(4)
 //End range
-#define COLOR_TRANSPARENT COLOR_WHITE
 
 #define Q_CALCX(x1,x2,xv) ((xv*xv)-xv*(x1+x2)+x1*x2)
 #define Q_SOLVEA(x1,x2,xv,yv) (yv/Q_CALCX(x1,x2,xv))
@@ -69,9 +66,14 @@
 
 #include "draw.h"
 #include "levels.h"
-#include "gfx/out/sprites_gfx.h"
-#include "gfx/out/title_gfx.h"
-#include "gfx/out/explode_gfx.h"
+#include "gfx/out/gfx.h"
+#include "gfx/out/ball_ts.h"
+#include "gfx/out/explosion_ts.h"
+#include "gfx/out/title.h"
+
+
+
+
 
 typedef struct thing {
 	uint8_t ypos;
@@ -79,13 +81,13 @@ typedef struct thing {
 	uint8_t w[4];
 } scanline_t;
 
-typedef struct thing2 { // :)
+typedef struct { // :)
 	float x;
 	float y;
 	float z;
 } vector_t;
 
-typedef struct anotherthing {
+typedef struct {
 	unsigned int hiscore;
 	unsigned int number_of_times_ran;
 	unsigned int number_of_times_quitted;
@@ -94,24 +96,36 @@ typedef struct anotherthing {
 	uint8_t reserved[20];
 } gamedata_t;
 
-
 vector_t empty_point = {0.0f,0.0f,0.0f};
+
 //Function prototypes
 void keywait(void);
 void keyconfirm(void);
-void printTextCenter(char *s,int y);
-//void drawMenu(char *sa[],uint8_t curopt,uint8_t maxopt);
-void drawTextBlock(char *sa[],uint8_t sa_len);
-void showStats(int data, char *s, uint8_t ypos);
+void printTextCenter(const char *s,int y);
+void drawTextBlock(const char *sa[],uint8_t sa_len);
+void showStats(int data, const char *s, uint8_t ypos);
 void drawTitleFrame(void);
 void genSection(uint8_t init);  //generates latter 16 blocks of level
-void changePalette(uint16_t *palette);
-void blankScreen();               //prevents artifacting between palette swaps
-vector_t proj(vector_t point);
 gamedata_t gamedata;
 
-void init_xlate(void);
-//void drawGameField(uint8_t tile_offset,uint8_t pixel_offset);
+
+/* 	Global graphics objects. Most objects will be unpacked into RAM.
+	What we won't be unpacking is the explosion sprites. We have all
+	the time in the world to unpack them as we go.
+*/
+gfx_UninitedSprite(title_banner, title_width, title_height);
+gfx_UninitedSprite(ball_1, 32, 32);
+gfx_UninitedSprite(ball_2, 32, 32);
+gfx_UninitedSprite(ball_3, 32, 32);
+gfx_UninitedSprite(ball_4, 32, 32);
+gfx_UninitedSprite(ball_5, 32, 32);
+gfx_UninitedSprite(ball_6, 32, 32);
+gfx_UninitedSprite(ball_7, 32, 32);
+gfx_UninitedSprite(ball_8, 32, 32);
+gfx_sprite_t *ballanim[8];
+gfx_UninitedSprite(explosion, 48, 48);
+gfx_UninitedSprite(resized_ball, 64, 64);
+
 
 
 //Globals. For performance reasons, locals may not be more than 128 bytes
@@ -119,27 +133,20 @@ void init_xlate(void);
 uint8_t track[32];
 scanline_t translate[240+32+32];  //32 above and below
 int translate_last_usable;
-gfx_UninitedSprite(curball,48,48);
-gfx_UninitedSprite(explosion,64,64);
-gfx_sprite_t *ballanim[8];
-gfx_UninitedSprite(titlebanner,title_width,title_height);
 level_t *level_pack;     //level pack currently loaded
-
-uint16_t game_palette[256];
-uint16_t title_palette[256];
 
 int8_t shadow_offsets[] = {0,1,1,1,1,0};  //For menu shadows
 int8_t object99[] = {0,0,-1};
 int8_t *next_x_offset = &object99[1]; //for inputs -1,0, and 1 to be correct.
-char *titleopts[] = {"Start game","Help","About","Quit"};
-char *helptext[] = {
+const char *titleopts[] = {"Start game","Help","About","Quit"};
+const char *helptext[] = {
 	"[2nd]   : Makes the ball jump",
 	"[MODE]  : Quits the game",
 	"[Up]    : Makes the ball move forward",
 	"[Left]  : Makes the ball move left",
 	"[Right] : Makes the ball move right"
 };
-char *creditstext[] = {
+const char *creditstext[] = {
 	"Based on Plain Jump 1.1 by Andreas Ess",
 	"Game written by Iambian",
 	"Coffee and sanity provided by Tim",
@@ -158,21 +165,22 @@ char *creditstext[] = {
 #define SIN_PR SIN_FN(IN_ANGLE)
 #define COS_PR SIN_FN(IN_ANGLE2)
 
-void main(void)
-{
+/* ************************************************************************ */
+
+int main(void) {
 	ti_var_t file;
 	kb_key_t kdir,kact;
 	int8_t tile_passed;     //increments. once 16, reset and gen new section
 	uint8_t state,i,j,k;
 	uint8_t tile_px_passed;  //0-32, is vertical offset of current tile.
-	uint8_t y,ty;
+	uint8_t y;
 	uint8_t ball_counter;    //0-7, index to ballanim
 	uint8_t going;
 	uint8_t lives;
-	uint8_t curopt,maxopt;
+	uint8_t curopt;
 	uint8_t nodeath;
-	int score;
-	int x,tx;
+	unsigned int score;
+	int x;
 	int ball_x;
 	int ball_min_x;
 	int ball_max_x;
@@ -181,83 +189,81 @@ void main(void)
 	int y_velocity;  //16.8fp
 	int x_offset;    //for subtle shake effect on landing
 	int idx;         //liek i, except longer.
-	int yi,wi,werr;
-	//int z_speed;
-	float xf,yf,x1,y1,z1,x2;
 	
-	
-	//13225
-	//12686
-	//12678
-	
-	
-	gfx_Begin();
-	gfx_SetTransparentColor(COLOR_WHITE);
-	gfx_palette[COLOR_GOLD]  = gfx_RGBTo1555(0xFF,0xD7,0x00);
-	gfx_palette[COLOR_GRAY]  = gfx_RGBTo1555(0x90,0x90,0x80);
-	gfx_palette[COLOR_DGRAY] = gfx_RGBTo1555(0x40,0x40,0x40);
-	memcpy(game_palette,gfx_palette,512);
-	memcpy(game_palette+COLOR_EXPLODESTART,explode_gfx_pal,sizeof_explode_gfx_pal);
-	memcpy(title_palette,gfx_palette,512);
-	memcpy(title_palette,title_gfx_pal,sizeof_title_gfx_pal); 
-	level_pack = levelpack; //INTERNAL LEVEL PACK
-	game_palette[COLOR_BLACK] = gfx_RGBTo1555(0x00,0x00,0x00);
-	/* Not needed anymore as we have dynamic background palette generation
-	for (i=1;i<241;++i) {
-		//game_palette[i] = gfx_Darken(gfx_RGBTo1555(0x87,0xCE,0xEB),255-i);
-		game_palette[i] = gfx_RGBTo1555(((0x80-i<0)?0:0x80-i),((0xCE -i<0)?0:0xCE -i),0xEB-(i>>2));
-	}
+	/* 
+		Initialize draw system
 	*/
-	zx7_Decompress(titlebanner,title_compressed);
-	for(i=0;i<8;++i)
-		zx7_Decompress(ballanim[i] = malloc(((32*32)+2)),ball_ts_tiles_compressed[i]);
-	
-	
+	gfx_Begin();
+	gfx_SetTransparentColor(COLOR_TRANSPARENT);
+	memcpy(&gfx_palette[COLOR_OFFSET(0)], game_set, sizeof game_set);
+	zx0_Decompress(title_banner, title_compressed);
+	ballanim[0] = ball_1;
+	ballanim[1] = ball_2;
+	ballanim[2] = ball_3;
+	ballanim[3] = ball_4;
+	ballanim[4] = ball_5;
+	ballanim[5] = ball_6;
+	ballanim[6] = ball_7;
+	ballanim[7] = ball_8;
+	for (i=0; i<ball_ts_num_tiles; ++i) {
+		zx0_Decompress(ballanim[i], ball_ts_tiles_compressed[i]);
+	}
+
+	/* 
+		Initialize game state
+	*/
+
+	level_pack = levelpack; //INTERNAL LEVEL PACK
+	y_velocity = x_offset = jumping = score = 0;
+	nodeath = curopt = going = ball_counter = lives = 0;
+	tile_px_passed = tile_passed = state = 0;
+
 	//Generates the translate array inline with this function
-	for (yf = -(3.5f+1.0f), yi = -32; yi < (240+32) ; yf += (1.0f/32.0f), ++yi) {
-		//condensed projection
-		z1 = PLANE_DIST/-(yf*SIN_PR-CAM_DIST);
-		x1 = ((z1*-2.0f    )+5.9f)*28;
-		y1 = ((z1*yf*COS_PR)+1.5f)*28;
-		x2 = ((z1*-1.0f    )+5.9f)*28;
+	{
+		int yi,wi,werr;
+		float yf,x1,y1,z1,x2;
 		
-		if ( ((unsigned int)yi)<240 && ((unsigned int)y1)<240) {
-			translate[yi+32].ypos   = (uint8_t) y1;
-			translate_last_usable   = yi;
-		} else
-			translate[yi+32].ypos   = 255;
-		translate[yi+32].startx = (int) x1;
-		for (i=0,wi=(x2-x1)*256,werr=0;i<4;++i,werr+=wi&255) {
-			translate[yi+32].w[i] = wi>>8;
-			if (werr&256) {
-				werr -= 256;
-				translate[yi+32].w[i]++;
+		for (yf = -(3.5f+1.0f), yi = -32; yi < (240+32) ; yf += (1.0f/32.0f), ++yi) {
+			//condensed projection
+			z1 = PLANE_DIST/-(yf*SIN_PR-CAM_DIST);
+			x1 = ((z1*-2.0f    )+5.9f)*28;
+			y1 = ((z1*yf*COS_PR)+1.5f)*28;
+			x2 = ((z1*-1.0f    )+5.9f)*28;
+			
+			if ( ((unsigned int)yi)<240 && ((unsigned int)y1)<240) {
+				translate[yi+32].ypos   = (uint8_t) y1;
+				translate_last_usable   = yi;
+			} else
+				translate[yi+32].ypos   = 255;
+			translate[yi+32].startx = (int) x1;
+			for (i=0,wi=(x2-x1)*256,werr=0;i<4;++i,werr+=wi&255) {
+				translate[yi+32].w[i] = wi>>8;
+				if (werr&256) {
+					werr -= 256;
+					translate[yi+32].w[i]++;
+				}
 			}
 		}
 	}
-	
-	//Initial state is zero (GS_TITLE)
-	//state = GS_TITLE;
-	y_velocity = x_offset = jumping = score = 0;
-	nodeath = curopt = going = ball_counter = lives = tile_px_passed = tile_passed = state = 0;
-	
+
 	ball_max_x = ball_min_x = translate[translate_last_usable+32].startx;
 	for (i=0;i<4;++i) ball_max_x += translate[translate_last_usable+32].w[i];
 	ball_max_x -= (32);
 	ball_x = ball_min_x;
 	ball_y = (240-32-8);
-	maxopt = 4;
-	changePalette(title_palette);
 	
 	//Reading previously saved data
-	ti_CloseAll();  //must use before any file i/o can be used
-	//single-equal is correct. assigning result of open to file
-	if (file=ti_Open("PlJmpDat","r")) {
+	if ((file=ti_Open("PlJmpDat","r"))) {
 		ti_Read(&gamedata,1,sizeof gamedata,file);
+		ti_Close(file);
 	} else {
 		memset(&gamedata,0,sizeof gamedata);
 	}
 		
+	/*
+		Main game loop. State-based.
+	*/
+
 	while (1) {
 		kb_Scan();
 		kdir = kb_Data[7];
@@ -283,7 +289,6 @@ void main(void)
 						score = 0;
 						ball_x = (ball_min_x + ball_max_x - 32)/2;
 						gamedata.number_of_times_ran++;
-						changePalette(game_palette);
 						keywait();
 					} else if (curopt == 1) {
 						state = GS_HELP;
@@ -383,17 +388,19 @@ void main(void)
 				if (score<=999999)	gfx_PrintUInt(score,6);
 				else				gfx_PrintString("u broek score >:(");
 				drawGameField(tile_passed,tile_px_passed,x_offset);
-				//we need more frames.
+				// Begin rescaling the ball in case we are jumping.
 				i = 127&(jumping>>8);
 				j = i>>3;  //scale ball size between 0-15 -> 32-47 wrt yoffset
 				k = 32+j;  //get new width of ball given height
 				j = j>>1;  //retain ball centering by adjusting based on new w
-				((uint8_t*)curball)[0] = k;
-				((uint8_t*)curball)[1] = k;
-				if (k==32) memcpy(curball,ballanim[(ball_counter>>1)&7],(32*32));
-				else gfx_ScaleSprite(ballanim[(ball_counter>>1)&7],curball);
-				//gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
-				gfx_TransparentSprite_NoClip(curball,ball_x-j,ball_y-(unsigned int)i-j);
+				if (k == 32) {
+					gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
+				} else {
+					resized_ball->width = k;
+					resized_ball->height = k;
+					gfx_ScaleSprite(ballanim[(ball_counter>>1)&7], resized_ball);
+					gfx_TransparentSprite_NoClip(resized_ball,ball_x-j,ball_y-(unsigned int)i-j);
+				}
 				//Changed out two conditionals for a lookup table
 				x_offset = next_x_offset[x_offset];
 				//if (x_offset == 1) x_offset = -1;
@@ -437,21 +444,14 @@ void main(void)
 				gfx_Wait();
 				drawBG();
 				drawGameField(tile_passed,tile_px_passed,x_offset);
-				if (ball_counter<6) {
-					zx7_Decompress(curball,explosion_ts_tiles_compressed[ball_counter]);
-					for (idx=2;idx<(48*48+2);++idx) {
-						((uint8_t*)curball)[idx] += COLOR_EXPLODESTART;
-					}
-					idx = 8+32;
-					if (jumping) idx = (127&(jumping>>8)+16);
-					gfx_SetTransparentColor(((uint8_t*)curball)[2]);
-					((int*)explosion)[0] = (64+(256*64)); //sprdims: 64w,64h
-					gfx_ScaleSprite(curball,explosion);
-					gfx_TransparentSprite(explosion,ball_x-16,ball_y-idx);
-					gfx_SetTransparentColor(COLOR_WHITE);
+				if (ball_counter<12) {
+					zx0_Decompress(explosion, explosion_ts_tiles_compressed[ball_counter>>1]);
+					resized_ball->width = 64;
+					resized_ball->height = 64;
+					//Reusing the resized ball as a temporary buffer.
+					gfx_ScaleSprite(explosion, resized_ball);
+					gfx_TransparentSprite(resized_ball, ball_x-16, ball_y-32);
 				}
-				/*
-				*/
 				++ball_counter;
 				break;
 			
@@ -483,7 +483,6 @@ void main(void)
 				}
 				gfx_SwapDraw();
 				keyconfirm();
-				if (state==GS_TITLE) changePalette(title_palette);
 				continue;
 				break;
 				
@@ -508,7 +507,7 @@ void main(void)
 		gfx_SwapDraw();
 		
 		//Debouncing, but not in-game.
-		if ((kact|kdir) && !(state==GS_GAMEPLAY || state==GS_FALLING)) {
+		if ((kact|kdir) && !(state==GS_GAMEPLAY || state==GS_FALLING || state==GS_QUITTING)) {
 			kact = kdir = 0;
 			keywait();
 		}
@@ -517,14 +516,16 @@ void main(void)
 	gfx_End();
 	
 	//Saving game data.
-	if (file=ti_Open("PlJmpDat","w")) {
+
+	if ((file=ti_Open("PlJmpDat","w"))) {
 		ti_Write(&gamedata,1,sizeof gamedata, file);
+		ti_SetArchiveStatus(true, file);
+		ti_Close(file);
 	} else {
 		asm_ClrLCDFull();
 		os_NewLine();
 		os_PutStrFull("Could not save game data.");
 	}
-    return;
 }
 
 
@@ -539,49 +540,28 @@ void keyconfirm(void) {
 
 
 void drawTitleFrame(void) {
-	gfx_FillScreen(((uint8_t*)titlebanner)[2]);
-	gfx_Sprite(titlebanner,((320-255)/2),10);
+	gfx_FillScreen(COLOR_BACKGROUND);
+	gfx_Sprite(title_banner,((320-255)/2),10);
 	gfx_SetTextScale(1,1);
 	gfx_SetTextFGColor(COLOR_BLACK);
 	gfx_PrintStringXY(VERSION,320-32,240-10);
 }
 
 
-void printTextCenter(char *s,int y) {
+void printTextCenter(const char *s,int y) {
 	int w;
 	w = gfx_GetStringWidth(s);
 	gfx_PrintStringXY(s,(320-w)/2,y);
 }
 
-/* Vertically-centered menu */
-/*
-void drawMenu(char *sa[],uint8_t curopt,uint8_t maxopt) {
-	uint8_t i,y,j;
-	y = ((240-(maxopt*25)+title_height) / 2) ;
-	gfx_SetTextScale(2,2);
-	for (i=0; i<maxopt; ++i,y+=25) {
-		gfx_SetTextFGColor(COLOR_BLACK);  //draw shadow at btm-right
-		for (j=0;j<6;j+=2) {
-			gfx_PrintStringXY(
-				sa[i],
-				(320-gfx_GetStringWidth(sa[i]))/2+shadow_offsets[(j+0)],
-				y+shadow_offsets[(j+1)]
-			);
-		}
-		if (i==curopt)	gfx_SetTextFGColor(COLOR_GOLD);
-		else			gfx_SetTextFGColor(COLOR_GRAY);
-		printTextCenter(sa[i],y);
-	}
-}*/
-
-void showStats(int data, char *s, uint8_t ypos) {
+void showStats(int data, const char *s, uint8_t ypos) {
 	gfx_SetTextXY(5,ypos);
 	gfx_PrintUInt(data,6);
 	gfx_PrintString(s);
 }
 
-void drawTextBlock(char *sa[],uint8_t sa_len) {
-	uint8_t i,w,y;
+void drawTextBlock(const char *sa[],uint8_t sa_len) {
+	uint8_t i,y;
 	int x;
 	gfx_SetTextScale(1,1);
 	gfx_SetTextFGColor(COLOR_BLACK);
@@ -659,16 +639,6 @@ void genSection(uint8_t init) {
 		if (result==2) genSection_Random();
 	}
 }
-
-void changePalette(uint16_t *palette) {
-	gfx_FillScreen(255);
-	gfx_SwapDraw();
-	gfx_FillScreen(255);
-	gfx_SwapDraw();
-	gfx_SetPalette(palette,512,0);
-	
-}
-
 
 
 

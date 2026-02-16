@@ -5,24 +5,12 @@
 # Set COMPRESSED to "YES" to create a compressed program
 # ----------------------------
 
-NAME        ?= PJUMP
-COMPRESSED  ?= NO
-ICON        ?= icon.png
-DESCRIPTION ?= "Plane Jump"
+NAME        = PJUMP
+ICON        = icon.png
+DESCRIPTION = "Plane Jump"
+COMPRESSED  = NO
 
-# ----------------------------
-# Other Options (Advanced)
-# ----------------------------
+CFLAGS = -Wall -Wextra -Oz
+CXXFLAGS = -Wall -Wextra -Oz
 
-#EXTRA_CFLAGS        ?=
-#USE_FLASH_FUNCTIONS ?= YES|NO
-#OUTPUT_MAP          ?= YES|NO
-#ARCHIVED            ?= YES|NO
-#OPT_MODE            ?= -optsize|-optspeed
-#SRCDIR              ?= src
-#OBJDIR              ?= obj
-#BINDIR              ?= bin
-#GFXDIR              ?= src/gfx
-#V                   ?= 1
-
-include $(CEDEV)/include/.makefile
+include $(shell cedev-config --makefile)
