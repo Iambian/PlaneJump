@@ -15,7 +15,7 @@
    crappier to get them to compress better shouldn't be the go-to solution.
 */
 
-#define VERSION "v0.2"
+#define VERSION "v0.3"
 
 #define GS_TITLE 0
 #define GS_GAMEPLAY 1
@@ -29,21 +29,14 @@
 #define GEN_INIT 1
 #define GEN_CONTINUE 0
 
-//COLOR_OFFSET defined in gfx/convimg.yaml
-//TODO: Move below includes and use any of the offsets in gfx.h
-#define COLOR_OFFSET(x) (241+x)
-#define COLOR_TRANSPARENT COLOR_OFFSET(0)
-#define COLOR_GOLD        COLOR_OFFSET(1)
-#define COLOR_GRAY        COLOR_OFFSET(2)
-#define COLOR_BLACK       COLOR_OFFSET(3)
-#define COLOR_BACKGROUND  COLOR_OFFSET(4)
-//End range
-
-#define Q_CALCX(x1,x2,xv) ((xv*xv)-xv*(x1+x2)+x1*x2)
-#define Q_SOLVEA(x1,x2,xv,yv) (yv/Q_CALCX(x1,x2,xv))
-#define QUADR(x1,x2,xv,yv,curx) (Q_SOLVEA(x1,x2,xv,yv)*curx*curx-curx*(x1+x2)+x1*x2)
 #define GRAVITY ((int)(0.38 * 256))
 #define INITIAL_VELOCITY ((int)(9*256))
+
+// Two lines of text, y positions centered on the game over banner.
+#define GAMEOVER_YPOS_2L_1 (240/2-30/2+5)
+#define GAMEOVER_YPOS_2L_2 (240/2-30/2+18)
+// One line of text, y position centered on the game over banner.
+#define GAMEOVER_YPOS_1L_1 (240/2-30/2+11)
 
 /* Keep these headers */
 #include <stdbool.h>
@@ -56,6 +49,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/rtc.h>
 
 /* External library headers */
 #include <debug.h>
@@ -71,9 +65,16 @@
 #include "gfx/out/explosion_ts_2.h"
 #include "gfx/out/title.h"
 
-
-
-
+//COLOR_OFFSET defined in gfx/convimg.yaml
+//NOTE: using title_palette_offset since that is the least likely name to change.
+#define COLOR_OFFSET(x) (title_palette_offset+x)
+#define COLOR_TRANSPARENT COLOR_OFFSET(0)
+#define COLOR_GOLD        COLOR_OFFSET(1)
+#define COLOR_GRAY        COLOR_OFFSET(2)
+#define COLOR_BLACK       COLOR_OFFSET(3)
+#define COLOR_BACKGROUND  COLOR_OFFSET(4)
+#define COLOR_DAKRBLUE	  COLOR_OFFSET(5)
+//End fixed-entry range
 
 typedef struct thing {
 	uint8_t ypos;
@@ -100,31 +101,39 @@ vector_t empty_point = {0.0f,0.0f,0.0f};
 
 //Function prototypes
 void keywait(void);
-void keyconfirm(void);
 void printTextCenter(const char *s,int y);
 void drawTextBlock(const char *sa[],uint8_t sa_len);
-void showStats(int data, const char *s, uint8_t ypos);
 void drawTitleFrame(void);
 void genSection(uint8_t init);  //generates latter 16 blocks of level
 gamedata_t gamedata;
 
 
 /* 	Global graphics objects. Most objects will be unpacked into RAM.
-	What we won't be unpacking is the explosion sprites. We have all
+	What we won't be unpacking are the explosion sprites. We have all
 	the time in the world to unpack them as we go.
 */
-gfx_UninitedSprite(title_banner, title_width, title_height);
-gfx_UninitedSprite(ball_1, 32, 32);
-gfx_UninitedSprite(ball_2, 32, 32);
-gfx_UninitedSprite(ball_3, 32, 32);
-gfx_UninitedSprite(ball_4, 32, 32);
-gfx_UninitedSprite(ball_5, 32, 32);
-gfx_UninitedSprite(ball_6, 32, 32);
-gfx_UninitedSprite(ball_7, 32, 32);
-gfx_UninitedSprite(ball_8, 32, 32);
-gfx_sprite_t *ballanim[8];
+gfx_UninitedRLETSprite(title_banner, title_size);
+gfx_UninitedRLETSprite(ball_1, 1+ 32 * 32);
+gfx_UninitedRLETSprite(ball_2, 1+ 32 * 32);
+gfx_UninitedRLETSprite(ball_3, 1+ 32 * 32);
+gfx_UninitedRLETSprite(ball_4, 1+ 32 * 32);
+gfx_UninitedRLETSprite(ball_5, 1+ 32 * 32);
+gfx_UninitedRLETSprite(ball_6, 1+ 32 * 32);
+gfx_UninitedRLETSprite(ball_7, 1+ 32 * 32);
+gfx_UninitedRLETSprite(ball_8, 1+ 32 * 32);
+gfx_UninitedSprite(normalball_1, 32, 32);
+gfx_UninitedSprite(normalball_2, 32, 32);
+gfx_UninitedSprite(normalball_3, 32, 32);
+gfx_UninitedSprite(normalball_4, 32, 32);
+gfx_UninitedSprite(normalball_5, 32, 32);
+gfx_UninitedSprite(normalball_6, 32, 32);
+gfx_UninitedSprite(normalball_7, 32, 32);
+gfx_UninitedSprite(normalball_8, 32, 32);
+gfx_rletsprite_t *ballanim[8];
+gfx_sprite_t *normalballanim[8];
 gfx_UninitedSprite(explosion, 24, 24);
 gfx_UninitedSprite(resized_ball, 64, 64);
+gfx_UninitedSprite(ball_temp, 32, 32); 	//For undoing RLET during scaling.
 
 
 
@@ -135,16 +144,20 @@ scanline_t translate[240+32+32];  //32 above and below
 int translate_last_usable;
 level_t *level_pack;     //level pack currently loaded
 
-int8_t shadow_offsets[] = {0,1,1,1,1,0};  //For menu shadows
-int8_t object99[] = {0,0,-1};
-int8_t *next_x_offset = &object99[1]; //for inputs -1,0, and 1 to be correct.
-const char *titleopts[] = {"Start game","Help","About","Quit"};
+int8_t object99[] = {0,0,-1};			//For use in shake effect.
+int8_t *next_x_offset = &object99[1]; 	//For inputs -1,0, and 1 to be correct.
+const char *titleopts[] = {
+	"Start game",
+	"Help",
+	"About",
+	"Quit"
+};
 const char *helptext[] = {
-	"[2nd]   : Makes the ball jump",
-	"[MODE]  : Quits the game",
-	"[Up]    : Makes the ball move forward",
-	"[Left]  : Makes the ball move left",
-	"[Right] : Makes the ball move right"
+	"[2nd] : Jump",
+	"[MODE] : Quit",
+	"[Up] : Go forward",
+	"[Left] : Go left",
+	"[Right] : Go right"
 };
 const char *creditstext[] = {
 	"Based on Plain Jump 1.1 by Andreas Ess",
@@ -154,7 +167,6 @@ const char *creditstext[] = {
 	"for suggestions and the chats",
 	"Thanks Cemetech, CodeBros, and Omnimaga",
 	"for putting up with my shenanigans",
-	
 };
 
 #define CAM_DIST 3.0f
@@ -169,7 +181,7 @@ const char *creditstext[] = {
 
 int main(void) {
 	ti_var_t file;
-	kb_key_t kdir,kact;
+	kb_key_t keys;
 	int8_t tile_passed;     //increments. once 16, reset and gen new section
 	uint8_t state,i,j,k;
 	uint8_t tile_px_passed;  //0-32, is vertical offset of current tile.
@@ -188,12 +200,15 @@ int main(void) {
 	int jumping;     //continue to use this as the y offset. is 16.8 fp
 	int y_velocity;  //16.8fp
 	int x_offset;    //for subtle shake effect on landing
+	void *unsafe_ball_pointer;	//Shrodinger's ball sprite. RLET or not?
 	
 	/* 
 		Initialize draw system
 	*/
 	gfx_Begin();
+	gfx_SetColor(COLOR_BLACK);
 	gfx_SetTransparentColor(COLOR_TRANSPARENT);
+	gfx_SetDrawBuffer();
 	memcpy(&gfx_palette[COLOR_OFFSET(0)], game_set, sizeof game_set);
 	zx0_Decompress(title_banner, title_compressed);
 	ballanim[0] = ball_1;
@@ -204,8 +219,18 @@ int main(void) {
 	ballanim[5] = ball_6;
 	ballanim[6] = ball_7;
 	ballanim[7] = ball_8;
+	normalballanim[0] = normalball_1;
+	normalballanim[1] = normalball_2;
+	normalballanim[2] = normalball_3;
+	normalballanim[3] = normalball_4;
+	normalballanim[4] = normalball_5;
+	normalballanim[5] = normalball_6;
+	normalballanim[6] = normalball_7;
+	normalballanim[7] = normalball_8;
 	for (i=0; i<ball_ts_num_tiles; ++i) {
-		zx0_Decompress(ballanim[i], ball_ts_tiles_compressed[i]);
+		zx0_Decompress(resized_ball, ball_ts_tiles_compressed[i]);
+		gfx_ConvertToRLETSprite(resized_ball, ballanim[i]);
+		gfx_ConvertFromRLETSprite(ballanim[i], normalballanim[i]);
 	}
 
 	/* 
@@ -253,10 +278,10 @@ int main(void) {
 	
 	//Reading previously saved data
 	if ((file=ti_Open("PlJmpDat","r"))) {
-		ti_Read(&gamedata,1,sizeof gamedata,file);
+		ti_Read(&gamedata, 1, sizeof gamedata, file);
 		ti_Close(file);
 	} else {
-		memset(&gamedata,0,sizeof gamedata);
+		memset(&gamedata, 0, sizeof gamedata);
 	}
 		
 	/*
@@ -265,19 +290,30 @@ int main(void) {
 
 	while (1) {
 		kb_Scan();
-		kdir = kb_Data[7];
-		kact = kb_Data[1];
-		
+		keys = kb_Data[7] | kb_Data[1];
+
+		if (state == GS_TITLE || state == GS_HELP || state == GS_CREDITS) {
+			// The gfx_SwapDraw() inside this does double duty of having
+			// something nontrivial to run while debouncing while retaining
+			// the perception of responsiveness during otherwise dead time.
+			while (kb_AnyKey()) gfx_SwapDraw();
+		}
+
 		//Quick exit without needing to resort to GOTOs.
 		if (state == GS_QUIT) break;
 		
 		switch (state) {
-			case GS_TITLE   :
-				srandom(random());  //cycle the seeds for RNG
-				if (kact&kb_2nd) {
+			case GS_TITLE:
+				srandom(rtc_Time());  //cycle the seeds for RNG
+				if (keys & kb_2nd) {
+					// Action key. This is where we process the consequences
+					// of our selection.
 					if (!curopt) {
-						if (kdir&(kb_Left|kb_Right)) nodeath = 1;
-						else nodeath = 0;
+						if (keys & (kb_Left | kb_Right)) {
+							nodeath = 1;
+						} else { 
+							nodeath = 0; 
+						}
 						genSection(GEN_INIT);
 						state = GS_GAMEPLAY;
 						//tile_passed = tile_px_passed = 0;
@@ -298,24 +334,24 @@ int main(void) {
 					}
 						
 				} else {
-					if (kact&kb_Mode) state = GS_QUIT;
-					if (kdir&kb_Down && curopt<3) ++curopt;
-					if (kdir&kb_Up   && curopt>0) --curopt;
+					if (keys & kb_Mode) state = GS_QUIT;
+					if (keys & kb_Down) curopt = (curopt+1) & 3;
+					if (keys & kb_Up  ) curopt = (curopt-1) & 3;
 					drawTitleFrame();
-					//inlined draw menu function
+					// Inlined draw menu function, for title screen.
 					gfx_SetTextScale(2,2);
 					y = ((240-(4*25)+title_height) / 2) ;
-					for (i=0; i<4; ++i,y+=25) {
+					for (i=0; i<4; ++i, y+=25) {
+						const char *s = titleopts[i];
+						//Draw text shadow.
 						gfx_SetTextFGColor(COLOR_BLACK);
-						for (j=0;j<6;j+=2) { //Draw shadows
-							gfx_PrintStringXY( titleopts[i],
-								(320-gfx_GetStringWidth(titleopts[i]))/2+shadow_offsets[j+0],
-								y+shadow_offsets[j+1]
-							);
-						}
+						int x = 160-(gfx_GetStringWidth(s)>>1);
+						gfx_PrintStringXY(s, x+1, y+1);
+						//gfx_PrintStringXY(s, x+0, y+1);
+						//gfx_PrintStringXY(s, x+1, y+0);
 						if (i==curopt)	gfx_SetTextFGColor(COLOR_GOLD);
 						else			gfx_SetTextFGColor(COLOR_GRAY);
-						printTextCenter(titleopts[i],y);
+						printTextCenter(s,y);
 					}
 					//
 					gfx_SetTextFGColor(COLOR_BLACK);
@@ -326,20 +362,19 @@ int main(void) {
 				break;
 			
 			case GS_GAMEPLAY:
-				if (kact&kb_Mode) { 
-					lives = 1;
-					state = GS_QUITTING;
-					ball_counter = 0;
-					gamedata.number_of_times_quitted++;
-					continue;
-				}
-				if (kdir&kb_Left && ball_x>=ball_min_x) {
+				if (keys & kb_Left && ball_x>=ball_min_x) {
 					ball_x-=7;
 				}
-				if (kdir&kb_Right && ball_x<ball_max_x) {
+				if (keys & kb_Right && ball_x<ball_max_x) {
 					ball_x+=7;
 				}
-				if (kdir&kb_Up) going = 1;
+				if (keys & kb_Up) {
+					going = 1;
+				} 
+				//NOTE: 2nd and MODE are handled in the jump logic below.
+				//NOTE: These notes are for future me. I spent an embarrasingly
+				// long time trying to figure out where the 2nd key was handled.
+				//NOTE: NEVER AGAIN.
 				if (!jumping) {
 					x = translate[translate_last_usable+32].startx;
 					for (j=0,k=1;j<4;++j,k<<=1) {
@@ -354,15 +389,46 @@ int main(void) {
 					}
 					y_velocity = 0;
 					//Located here to prevent infinite air-jumping
-					if (kact&kb_2nd && !jumping) {
+					if (keys & kb_2nd && !jumping) {
 						y_velocity = jumping = INITIAL_VELOCITY;
 					}
-				} else {
+					//Located here to prevent mid-air quitting.
+					//I'm going to pretend this fix is to prevent fat-fingering
+					//the quit button while jumping. The real reason is because
+					//I optimized away the explosion animation during a jump.
+					if (keys & kb_Mode) {
+						lives = 1;
+						state = GS_QUITTING;
+						ball_counter = 0;
+						gamedata.number_of_times_quitted++;
+						continue;
+					}
+					// As a reminder, this branch is what happens when you
+					// are NOT jumping. My screen isn't tall. And I need to
+					// add more jump-dependent logic.
+					unsafe_ball_pointer = ballanim[(ball_counter>>1)&7];
+					k = 32;  //default size of ball
+				} 
+				if (jumping) {
+					// This code must run on jump state change, which is why
+					// it's here instead of the above's else statement.
+					// This fixes a glitch that really should've caused a crash.
 					y_velocity -= GRAVITY;
 					jumping += y_velocity;
 					if (jumping <= 0) {
 						jumping = 0;
 						x_offset = 1;
+						unsafe_ball_pointer = ballanim[(ball_counter>>1)&7];
+					} else {
+						i = 127&(jumping>>8);
+						j = i>>3;  //scale ball size between 0-15 -> 32-47 wrt yoffset
+						k = 32+j;  //get new width of ball given height
+						j = j>>1;  //retain ball centering by adjusting based on new w
+						unsafe_ball_pointer = normalballanim[(ball_counter>>1)&7];
+						resized_ball->width = k;
+						resized_ball->height = k;
+						gfx_ScaleSprite(unsafe_ball_pointer, resized_ball);
+						unsafe_ball_pointer = resized_ball;
 					}
 				}
 				//Move down
@@ -379,31 +445,20 @@ int main(void) {
 						genSection(GEN_CONTINUE);
 					}
 				}
-				gfx_SetTextFGColor(COLOR_BLACK);
-				gfx_SetTextScale(1,1);
+				x_offset = next_x_offset[x_offset];
 				gfx_SetTextXY(5,5);
+
+				//Begin graphics render section.
 				gfx_Wait();
 				drawBG();
 				if (score<=999999)	gfx_PrintUInt(score,6);
 				else				gfx_PrintString("u broek score >:(");
 				drawGameField(tile_passed,tile_px_passed,x_offset);
-				// Begin rescaling the ball in case we are jumping.
-				i = 127&(jumping>>8);
-				j = i>>3;  //scale ball size between 0-15 -> 32-47 wrt yoffset
-				k = 32+j;  //get new width of ball given height
-				j = j>>1;  //retain ball centering by adjusting based on new w
-				if (k == 32) {
-					gfx_TransparentSprite_NoClip(ballanim[(ball_counter>>1)&7],ball_x,ball_y-(unsigned int)i);
+				if (jumping) {
+					gfx_TransparentSprite_NoClip(unsafe_ball_pointer,ball_x-j, ball_y-i-j);
 				} else {
-					resized_ball->width = k;
-					resized_ball->height = k;
-					gfx_ScaleSprite(ballanim[(ball_counter>>1)&7], resized_ball);
-					gfx_TransparentSprite_NoClip(resized_ball,ball_x-j,ball_y-(unsigned int)i-j);
+					gfx_RLETSprite_NoClip(unsafe_ball_pointer,ball_x, ball_y);
 				}
-				//Changed out two conditionals for a lookup table
-				x_offset = next_x_offset[x_offset];
-				//if (x_offset == 1) x_offset = -1;
-				//if (x_offset == -1) x_offset = 0;
 				break;
 			
 			case GS_FALLING:
@@ -419,7 +474,7 @@ int main(void) {
 				ball_y -= (y_velocity>>8);
 				gfx_Wait();
 				drawBG();
-				gfx_TransparentSprite(ballanim[(++ball_counter>>1)&7],ball_x,ball_y);
+				gfx_RLETSprite(ballanim[(++ball_counter>>1)&7],ball_x,ball_y);
 				tile_px_passed += 1;
 				if (tile_px_passed>=32) {
 					tile_px_passed -= 32;
@@ -428,10 +483,6 @@ int main(void) {
 						genSection(GEN_CONTINUE);
 					}
 				}
-				// gfx_SetTextXY(5,20);
-				// gfx_PrintUInt(tile_passed,3);
-				// gfx_PrintString(" : ");
-				// gfx_PrintUInt(tile_px_passed,3);
 				drawGameField(tile_passed,tile_px_passed,x_offset);
 				break;
 				
@@ -456,60 +507,71 @@ int main(void) {
 			
 			case GS_GAMEOVER:
 				ball_y = (240-32-8);  //reset after ball falls off edge
-				gfx_SetColor(COLOR_BLACK);
+				--lives;
+				// On next life (if any) fill out track to prevent softlock.
+				for (i=3;i<5;++i) track[i+tile_passed] = 0xFF;
 				gfx_SetTextFGColor(COLOR_GOLD);
 				gfx_FillRectangle(0,(240/2-30/2),320,30);
-				--lives;
 				if (lives) {
-					if (lives>1) {
-						printTextCenter("Lives remaining",(240/2-30/2+5));
-						gfx_SetTextXY(((320-8)/2),(240/2-30/2+18));
-						gfx_PrintUInt(lives,1);
-					} else printTextCenter("This is your last chance",(240/2-30/2+11));
-					for (i=3;i<5;++i) track[i+tile_passed] = 0xFF;
 					state = GS_GAMEPLAY;
 					jumping = going = 0;
+					if (lives>1) {
+						printTextCenter("Lives remaining",GAMEOVER_YPOS_2L_1);
+						gfx_SetTextXY(((320-8)/2),GAMEOVER_YPOS_2L_2);
+						gfx_PrintUInt(lives,1);
+					} else  {
+						printTextCenter("This is your last chance",GAMEOVER_YPOS_1L_1);
+					}
 				} else {
+					state = GS_TITLE;
 					if (score > gamedata.hiscore) {
-						y = (240/2-30/2+5);
-						printTextCenter("You achieved a new high score!",(240/2-30/2+18));
+						y = GAMEOVER_YPOS_2L_1;
+						printTextCenter("You achieved a new high score!",GAMEOVER_YPOS_2L_2);
 						gamedata.hiscore = score;
 					} else {
-						y = (240/2-30/2+11);
+						y = GAMEOVER_YPOS_1L_1;
 					}
 					printTextCenter("Game Over",y);
-					state = GS_TITLE;
 				}
+				gfx_SetTextFGColor(COLOR_BLACK);
 				gfx_SwapDraw();
-				keyconfirm();
-				continue;
-				break;
+				keywait();
+				while (!kb_AnyKey());
+				keywait();
+				continue;	//No need to gfx_SwapDraw twice.
 				
 			case GS_HELP :
-				if (kact) state = GS_TITLE;
+				if (keys) state = GS_TITLE;
 				drawTitleFrame();
 				drawTextBlock(helptext,5);
-				showStats(gamedata.number_of_times_died," - Deaths",210);
-				showStats(gamedata.number_of_times_quitted," - Quits",220);
-				showStats(gamedata.number_of_times_ran," - Runs",230);
+				gfx_SetTextXY(5, 210);
+				gfx_PrintUInt(gamedata.number_of_times_died, 6);
+				gfx_PrintString(" - Deaths");
+				gfx_SetTextXY(5, 220);
+				gfx_PrintUInt(gamedata.number_of_times_quitted, 6);
+				gfx_PrintString(" - Quits");
+				gfx_SetTextXY(5, 230);
+				gfx_PrintUInt(gamedata.number_of_times_ran, 6);
+				gfx_PrintString(" - Runs");
 				break;
 			
 			case GS_CREDITS :
-				if (kact) state = GS_TITLE;
+				if (keys) state = GS_TITLE;
 				drawTitleFrame();
 				drawTextBlock(creditstext,7);
 				break;
 				
 			default:
+				state = GS_QUIT;
 				break;
 		}
+		// This is supposed to be the final action of the loop.
+		// Any and all drawing routines are intended to be as close to this
+		// side of the loop as possible. All non-rendering logic needs to
+		// be logically closest to the top of the loop as possible. "Logically"
+		// because the size of those switch cases can warp the perception of
+		// where the "top" of the loop is.
 		gfx_SwapDraw();
-		
-		//Debouncing, but not in-game.
-		if ((kact|kdir) && !(state==GS_GAMEPLAY || state==GS_FALLING || state==GS_QUITTING)) {
-			kact = kdir = 0;
-			keywait();
-		}
 	}
 
 	gfx_End();
@@ -531,38 +593,23 @@ int main(void) {
 void keywait(void) {
 	while (kb_AnyKey());  //Pauses until keys are released
 }
-void keyconfirm(void) {
-	keywait();
-	while (!kb_AnyKey());
-	keywait();
-}
-
 
 void drawTitleFrame(void) {
 	gfx_FillScreen(COLOR_BACKGROUND);
-	gfx_Sprite(title_banner,((320-255)/2),10);
-	gfx_SetTextScale(1,1);
-	gfx_SetTextFGColor(COLOR_BLACK);
+	gfx_RLETSprite_NoClip(title_banner,((320-255)/2),10);
 	gfx_PrintStringXY(VERSION,320-32,240-10);
 }
 
 
-void printTextCenter(const char *s,int y) {
+void printTextCenter(const char *s, int y) {
 	int w;
 	w = gfx_GetStringWidth(s);
 	gfx_PrintStringXY(s,(320-w)/2,y);
 }
 
-void showStats(int data, const char *s, uint8_t ypos) {
-	gfx_SetTextXY(5,ypos);
-	gfx_PrintUInt(data,6);
-	gfx_PrintString(s);
-}
-
-void drawTextBlock(const char *sa[],uint8_t sa_len) {
+void drawTextBlock(const char *sa[], uint8_t sa_len) {
 	uint8_t i,y;
 	int x;
-	gfx_SetTextScale(1,1);
 	gfx_SetTextFGColor(COLOR_BLACK);
 	y = (240 + title_height - 12 - sa_len*12)/2;
 	for (i=0;i<sa_len;++i,y+=12) {

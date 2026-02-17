@@ -74,7 +74,7 @@ dgf_start:
 		srl c
 		ld  c,a  ;px offset. some additional testing, yes?
 		sbc a,a
-		and a,OTHER_COLOR ;A is 0 or 244
+		and a,OTHER_COLOR
 		ld  L,a
 		ld  a,b
 		cp  33

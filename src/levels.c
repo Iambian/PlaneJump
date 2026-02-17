@@ -7,7 +7,15 @@
 		after it runs through it?
 */
 
-
+/* 	Level construction notes:
+	Segments contain 16 LDAT()s, which are 4-bit values representing the
+	presence of tiles in each column of the segment.
+	Each level must contain at least one segment. All segments must be
+	whole (16 LDATs). The game will read in segments until it reaches the end of
+	the level, then move on to the next level. The game will read in levels until
+	it reaches the end of the level pack, at which point it will generate random
+	segments for the rest of the run.
+*/
 uint8_t level1[] = {
 	//Segment 1
 	LDAT(1,1,0,0)
@@ -60,93 +68,6 @@ uint8_t level1[] = {
 	LDAT(1,1,0,0)
 	LDAT(1,1,1,0)
 	LDAT(1,1,1,1)
-	/*
-	//Segment 4
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	//Segment 5
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	//Segment 6
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	//Segment 7
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	//Segment 8
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	LDAT(0,0,0,0)
-	*/
 };
 
 

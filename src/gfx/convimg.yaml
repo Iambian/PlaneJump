@@ -7,7 +7,8 @@ palettes:
       - color: {index: 2, hex: "#909080"}   #Gray. Menu text unselected
       - color: {index: 3, hex: "#000000"}   #Black. For text outlines and such.
       - color: {index: 4, hex: "#7EC5F1"}   #Light blue. For background.
-      - color: {index: 5, hex: "#0744E2"}   #Blue. For the plane.
+      - color: {index: 5, hex: "#0744E2"}   #Dark blue. For the plane.
+      - color: {index: 6, hex: "#848284"}   #Darker gray for plane.
     quality: 10
     images:
       - title.png
@@ -20,7 +21,7 @@ converts:
     palette-offset: 241
     compress: zx0
     style: palette
-    transparent-index: 242
+    transparent-index: 0
     tilesets:
         tile-width: 32
         tile-height: 32
@@ -31,7 +32,7 @@ converts:
     palette-offset: 241
     compress: zx0
     style: palette
-    transparent-index: 242
+    transparent-index: 0
     tilesets:
         tile-width: 24
         tile-height: 24
@@ -41,7 +42,8 @@ converts:
     palette: game_set
     palette-offset: 241
     compress: zx0
-    style: palette
+    style: rlet
+    transparent-index: 241
     images:
       - title.png
 
