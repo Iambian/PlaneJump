@@ -111,7 +111,10 @@ Version History
 * **0.1** - Initial release.
 * **0.2** - Cleaned up code and updated it to build on 
 	toolchain v12.1 as opposed to probably-v8.0
-
+* **0.3** - Further cleaned up code. Probably improved performance via
+	clumping draw logic closer together, evicting non-drawing logic.
+	Also cleaned up the title banner and made questionable memory choices
+	in pursuit of a lower filesize and tighter performance.
 
 
 
